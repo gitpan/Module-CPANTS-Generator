@@ -1,8 +1,23 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 59 $
-# $Date: 2004-08-22 22:06:03 +0200 (Sun, 22 Aug 2004) $ 
+# $Rev: 66 $
+# $Date: 2004-09-07 10:04:35 +0200 (Tue, 07 Sep 2004) $ 
 #-----------------------------------------------------------------
+
+
+2004-09-06
+** released as Module-CPANTS-Generator-0.22
+- added required_by metadata to distribution
+- Prereq: use $metric->{modules} instead of distname
+- added no_bar to more scripts
+
+2004-09-03
+- New Generator: MCG::FindModules:
+	generate list of included modules by looking at *.pm in filelist
+- MC::Generator: load_generators uses new config value 'generators'
+- added 'no_bar' and 'print_distname' as config values, but not implemented
+	in all scripts	
+
 
 2004-08-22
 

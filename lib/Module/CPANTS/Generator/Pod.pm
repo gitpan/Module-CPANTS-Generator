@@ -6,7 +6,7 @@ use base 'Module::CPANTS::Generator';
 use File::Spec::Functions qw(catfile);
 
 use vars qw($VERSION);
-$VERSION = "0.21";
+$VERSION = "0.22";
 
 
 ##################################################################

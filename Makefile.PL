@@ -26,4 +26,4 @@
       exec $^X, $makefile, @ARGV;  # Redo now that we have Module::Build
     }
     Module::Build::Compat->run_build_pl(args => \@ARGV);
-    Module::Build::Compat->write_makefile(build_class => 'Module::Build');
+    Module::Build::Compat->write_makefile();

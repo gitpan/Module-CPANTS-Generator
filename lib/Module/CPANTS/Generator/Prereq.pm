@@ -7,7 +7,7 @@ use YAML qw(:all);
 use Module::MakefilePL::Parse;
 
 use vars qw($VERSION);
-$VERSION = "0.21";
+$VERSION = "0.22";
 
 ##################################################################
 # Analyse
@@ -123,12 +123,17 @@ __PACKAGE__->kwalitee_definitions
      code=>sub {
 	 my $metric=shift;
 	 my $DBH=Module::CPANTS::Generator->DBH;
+	 my $required_by=0;
 
-	 my $module_name=$metric->{distribution}{dist_without_version};
-	 return 0 unless $module_name;
-	 $module_name=~s/-/::/g;
+	 my $modules=$metric->{modules};
+	 foreach (@$modules) {
+	     my $module=$_->{module};
+	     $required_by+=$DBH->selectrow_array("select count(dist) from prereq where requires=?",undef,$module);
+	 }
 
-	 my $required_by=$DBH->selectrow_array("select count(dist) from prereq where requires=?",undef,$module_name);
+	 $metric->{distribution}{required_by}=$required_by if $required_by>0;
+
+#	 $DBH->do("update distribution set required_by=? where dist=?",undef,$required_by,$metric->{dist}) if $required_by>0;
 
 	 if ($required_by>2) {
 	     $DBH->do("update kwalitee set kwalitee=?,is_prereq=1 where dist=?",undef,$metric->{kwalitee}{kwalitee}+1,$metric->{dist}) || die "foo $!";

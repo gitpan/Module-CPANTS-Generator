@@ -25,34 +25,46 @@ my $cpants='Module::CPANTS::Generator';
 $cpants->setup_dirs;
 my $cp=$cpants->get_cpan_backend;
 
+my $limit=$cpants->conf->limit || 0;
+
 # reload CPAN indices
 if ($cpants->conf->reload_cpan) {
     print "+ reload CPAN indices\n" if $cpants->conf->verbose;
     $cp->reload_indices(update_source => 1);
 }
 
-my $progress=Term::ProgressBar->new({
-				     name=>'Fetch from CPAN ',
-				     count=>scalar keys %{$cp->module_tree},
-				    });
-
-my %seen;
-foreach my $module (sort { $a->module cmp $b->module } values %{$cp->module_tree}) {
+# get list of packages
+my (%seen,@packages);
+foreach my $module (values %{$cp->module_tree}) {
     my $package=$module->package;
 
-    $progress->update();
+    next unless $package;
 
-    next if $seen{$package}++;   # allready seen
     next if $package=~/^perl[-\d]/;
     next if $package=~/^ponie-/;
     next if $package=~/^parrot-/;
+    next if $package=~/^Bundle-/;
+    next if $seen{$package};   # allready seen
+    $seen{$package}=1;
+    push(@packages,$module);
+}
+
+my $progress=Term::ProgressBar->new({
+				     name=>'Fetch from CPAN ',
+				     count=>$limit || scalar @packages,
+				    }) unless $cpants->conf->no_bar;
+
+foreach my $module (@packages) {
+    my $package=$module->package;
 
     $module->fetch(fetchdir=>$cpants->distsdir);
 #    print "$package\n";
 
-    if (my $limit=$cpants->conf->limit) {
+    if ($limit) {
 	last if scalar keys %seen > $limit;
     }
+
+    $progress->update() unless $cpants->conf->no_bar;
 }
 
 

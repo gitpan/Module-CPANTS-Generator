@@ -8,7 +8,7 @@ use File::Spec::Functions qw(catdir catfile);
 use File::stat;
 
 use vars qw($VERSION);
-$VERSION = "0.21";
+$VERSION = "0.22";
 
 
 ##################################################################
@@ -161,7 +161,8 @@ sub create_db {
   version_minor varchar(30),
   extension varchar(25),
   extracts_nicely tinyint unsigned not null default 0,
-  extractable tinyint unsigned not null default 0
+  extractable tinyint unsigned not null default 0,
+  required_by int not null default 0
 )",
 "CREATE INDEX dist_dist_idx on distribution (dist)",
 

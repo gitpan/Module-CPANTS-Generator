@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Module-CPANTS-Generator
-version: 0.21
+version: 0.22
 author:
   - Thomas Klausner <domm@zsi.at> http://domm.zsi.at
 abstract: Generate CPANTS statistics
@@ -20,26 +20,29 @@ requires:
   Term::ProgressBar: 1.18
   Test::More: 0.01
   YAML: 0.35
+recommends: {}
+build_requires: {}
+conflicts: {}
 provides:
   Module::CPANTS::Generator:
     file: lib/Module/CPANTS/Generator.pm
-    version: 0.21
+    version: 0.22
   Module::CPANTS::Generator::CPAN:
     file: lib/Module/CPANTS/Generator/CPAN.pm
-    version: 0.21
+    version: 0.22
   Module::CPANTS::Generator::Files:
     file: lib/Module/CPANTS/Generator/Files.pm
-    version: 0.21
+    version: 0.22
   Module::CPANTS::Generator::Pod:
     file: lib/Module/CPANTS/Generator/Pod.pm
-    version: 0.21
+    version: 0.22
   Module::CPANTS::Generator::Prereq:
     file: lib/Module/CPANTS/Generator/Prereq.pm
-    version: 0.21
+    version: 0.22
   Module::CPANTS::Generator::Unpack:
     file: lib/Module/CPANTS/Generator/Unpack.pm
-    version: 0.21
+    version: 0.22
   varchar:
     file: lib/Module/CPANTS/Generator/Unpack.pm
-    version: 0.21
-generated_by: Module::Build version 0.24
+    version: 0.22
+generated_by: Module::Build version 0.22

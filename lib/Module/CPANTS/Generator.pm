@@ -19,7 +19,7 @@ use FindBin;
 use DateTime;
 
 use vars qw($VERSION);
-$VERSION = "0.21";
+$VERSION = "0.22";
 
 
 ##################################################################
@@ -45,13 +45,13 @@ $class->mk_accessors
 {
     my $config=AppConfig->new();
     $config->define
-      (qw(quiet verbose force reload_cpan no_authors),
+      (qw(force reload_cpan no_authors no_bar print_distname),
        qw(limit=s),
        'tempdir=s'=>{DEFAULT=>'temp'},
        'distsdir=s'=>{DEFAULT=>'dists'},
        'metricdir=s'=>{DEFAULT=>'metrics'},
        'cpan=s'=>{DEFAULT=>'/home/cpan/'},
-
+       'generators=@'=>{DEFAULT=>[qw(Unpack Files FindModules Pod Prereq CPAN)]}
        #   'tests=s@'=>{DEFAULT=>['Init']},
       );
     $config->args;
@@ -175,7 +175,7 @@ sub tidytemp {
 
 sub load_generators {
     my $self=shift;
-    my $generators=shift;
+    my $generators=$self->conf->generators;
 
 #    print "Loading Generators.\n" unless $self->conf->quiet;
 
@@ -185,7 +185,7 @@ sub load_generators {
 	    $gen="Module::CPANTS::Generator::$gen";
 	    eval "require $gen";
 	    croak "cannot load $gen\n$@" if $@;
-	    print "+ loaded $gen\n" if $self->conf->verbose;
+#	    print "+ loaded $gen\n" if $self->conf->verbose;
 	}
     }
 
@@ -235,11 +235,11 @@ sub determine_kwalitee {
 	    $metric->{kwalitee}{kwalitee}+=1;
 
 	} else {
-	    print "+ failed $name\n" if $class->conf->verbose;
+#	    print "+ failed $name\n" if $class->conf->verbose;
 	    $metric->{kwalitee}{$name}=0;
 	}
     }
-    print "+ Kwalitee: ".$metric->{kwalitee}{kwalitee}."\n" if $class->conf->verbose;
+#    print "+ Kwalitee: ".$metric->{kwalitee}{kwalitee}."\n" if $class->conf->verbose;
     return;
 }
 

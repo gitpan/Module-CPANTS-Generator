@@ -1,23 +1,42 @@
 #-----------------------------------------------------------------
 # TODO Module-CPANTS-Generator
-# $Rev: 58 $
-# $Date: 2004-08-22 21:21:32 +0200 (Sun, 22 Aug 2004) $ 
+# $Rev: 66 $
+# $Date: 2004-09-07 10:04:35 +0200 (Tue, 07 Sep 2004) $ 
 #-----------------------------------------------------------------
 
 
 #-----------------------------------------------------------------
-# for release 0.22
+# for release 0.23
 #-----------------------------------------------------------------
 
-* lint.pl
-* More Docs
-* tests?
+#-----------------------------------------------------------------
+# The stuff that's bound to stay a while on the TODO-list 
+#-----------------------------------------------------------------
+
+* Better Docs
+* tests
 
 #-----------------------------------------------------------------
 # various ideas
 #-----------------------------------------------------------------
 
-* generate list of included modules by looking at *.pm in filelist
+* lint.pl
+
+
+
+* entries in the testers db
+
+* average ratings (http://cpanratings.perl.org/)
+
+* entries in rt.cpan.org
+
+* Autor != R.U.Thor
+
+* check if MANIFEST lists all files
+
+* uses strict
+
+* Prereqs listed are complete
 
 
 #-----------------------------------------------------------------

@@ -16,7 +16,7 @@ use Term::ProgressBar;
 use Module::CPANTS::Generator;
 my $class="Module::CPANTS::Generator";
 $class->setup_dirs;
-$class->load_generators([qw(Unpack Files Pod Prereq CPAN)]);
+$class->load_generators;
 
 opendir(DIR,$class->distsdir) || die "$!";
 my @files=grep {!/^\./} readdir(DIR);
@@ -24,7 +24,7 @@ my @files=grep {!/^\./} readdir(DIR);
 my $progress=Term::ProgressBar->new({
 				     name=>'Analyse Dists   ',
 				     count=>scalar @files,
-				    });
+				    }) unless $class->conf->no_bar;
 
 foreach my $f (@files) {
     next if $f=~/^\./;
@@ -43,7 +43,7 @@ foreach my $f (@files) {
     $cpants->write_metric;
     $cpants->tidytemp;
 
-    $progress->update();
+    $progress->update() unless $class->conf->no_bar;
 }
 
 __END__

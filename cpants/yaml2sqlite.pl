@@ -19,7 +19,7 @@ use Term::ProgressBar ;
 
 my $cpants='Module::CPANTS::Generator';
 $cpants->setup_dirs;
-$cpants->load_generators([qw(Unpack Files Pod Prereq CPAN)]);
+$cpants->load_generators;
 
 #-----------------------------------------------------------------
 # create DB
@@ -34,7 +34,7 @@ $cpants->DBH($DBH);
 foreach my $generator (@{$cpants->available_generators}) {
     my $sql_create=$generator->create_db;
     foreach my $sql (@$sql_create) {
-	print "$sql\n" if $cpants->conf->verbose;
+#	print "$sql\n" if $cpants->conf->verbose;
 	$DBH->do($sql);
     }
 }
@@ -42,7 +42,7 @@ foreach my $generator (@{$cpants->available_generators}) {
 # create kwalitee table
 {
     my $sql=$cpants->create_kwalitee_table;
-    print "$sql\n" if $cpants->conf->verbose;
+#    print "$sql\n" if $cpants->conf->verbose;
     $DBH->do($sql);
 }
 
@@ -57,14 +57,14 @@ my @files=grep {/\.yml$/} readdir(DIR);
 my $progress=Term::ProgressBar->new({
 				     name=>'yaml2sqlite     ',
 				     count=>scalar @files,
-				    });
+				    }) unless $cpants->conf->no_bar;
 
 foreach my $f (@files) {
     chomp($f);
     my $metric=LoadFile($f);
-#    print $metric->{dist}."\n" unless $cpants->conf->quiet;
+    print $metric->{dist}."\n" if $cpants->conf->print_distname;
     $cpants->yaml2db($metric);
-    $progress->update();
+    $progress->update() unless $cpants->conf->no_bar;
 }
 
 

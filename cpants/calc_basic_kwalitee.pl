@@ -17,7 +17,7 @@ use YAML qw(:all);
 
 my $cpants='Module::CPANTS::Generator';
 $cpants->setup_dirs;
-$cpants->load_generators([qw(Unpack Files Pod Prereq CPAN)]);
+$cpants->load_generators;
 
 chdir($cpants->metricdir);
 opendir(DIR,'.') || die "$!";
@@ -26,7 +26,7 @@ my @files=grep {/\.yml$/} readdir(DIR);
 my $progress=Term::ProgressBar->new({
 				     name=>'Basic Kwalitee  ',
 				     count=>scalar @files,
-				    });
+				    }) unless $cpants->conf->no_bar;
 
 foreach my $f (@files) {
     chomp($f);
@@ -38,7 +38,7 @@ foreach my $f (@files) {
     $cpants->determine_kwalitee('basic',$metric);
     $cpants->write_metric($metric);
 
-    $progress->update();
+    $progress->update() unless $cpants->conf->no_bar;
 }
 
 

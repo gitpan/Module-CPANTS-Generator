@@ -6,7 +6,7 @@ use File::Find;
 use File::Spec::Functions qw(catdir catfile abs2rel);
 
 use vars qw($VERSION);
-$VERSION = "0.21";
+$VERSION = "0.22";
 
 
 ##################################################################
@@ -35,7 +35,7 @@ sub analyse {
     @dirs=map {abs2rel($_,$testdir)} @dirs;
 
     $cpants->files(\@files);
-    $cpants->dirs(\@files);
+    $cpants->dirs(\@dirs);
 
     # find symlinks / bad_permissions
     my (@symlinks,@bad_permissions);
@@ -62,17 +62,21 @@ sub analyse {
 
     # find special files
     my %reqfiles;
-    my @special_files=(qw(Makefile.PL Build.PL README META.yml SIGNATURE MANIFEST NINJA));
+    my @special_files=(qw(Makefile.PL Build.PL README META.yml SIGNATURE MANIFEST NINJA test.pl));
     foreach my $file (@special_files){
 	(my $db_file=$file)=~s/\./_/g;
 	$db_file=lc($db_file);
 	$cpants->{metric}{files}{$db_file}=((grep {$_ eq "$file"} @files)?1:0);
     }
 
-    # find modules names
-    # /lib/.*.pm    -> Foo/Bar.pm -> Foo::Bar
-    # bzw /.*.pm    -> Bar.pm     -> distname
+    # find special dirs
+    my @special_dirs=(qw(lib t));
+    foreach my $dir (@special_dirs){
+	my $db_dir="dir_".$dir;
+	$cpants->{metric}{files}{$db_dir}=((grep {$_ eq "$dir"} @dirs)?1:0);
+    }
 
+    return;
 }
 
 #-----------------------------------------------------------------
@@ -131,6 +135,16 @@ __PACKAGE__->kwalitee_definitions
      error=>q{This distribution includes symbolic links (symlinks). This is bad, because there are operating systems do not handle symlinks.},
      code=>sub {shift->{files}{count_symlinks} ? 0 : 1},
     },
+    {
+     name=>'has_tests',
+     type=>'basic',
+     error=>q{This distribution doesn't contain either a file called 'test.pl' or a directory called 't'. This indicates that it doesn't contain even the most basic test-suite. This is really BAD!},
+     code=>sub {
+	 my $m=shift;
+	 return 1 if $m->{files}{test_pl} || $m->{files}{dir_t};
+	 return 0;
+     },
+    },
 
 
 # this might not be a good metric - at least according to feedback
@@ -169,8 +183,10 @@ sub create_db {
   manifest tinyint unsigned not null default 0,
   meta_yml tinyint unsigned not null default 0,
   signature tinyint unsigned not null default 0,
-  ninja tinyint unsigned not null default 0
-
+  ninja tinyint unsigned not null default 0,
+  test_pl tinyint unsigned not null default 0,
+  dir_lib tinyint unsigned not null default 0,
+  dir_t tinyint unsigned not null default 0
 )",
 "CREATE INDEX file_dist_idx on files (dist)"
 ];
