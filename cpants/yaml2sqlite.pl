@@ -15,7 +15,8 @@ use YAML qw(:all);
 use DBI;
 use File::Copy;
 use DateTime;
-use Term::ProgressBar ;
+
+print "yaml2sqlite.pl\n".('#'x66)."\n";
 
 my $cpants='Module::CPANTS::Generator';
 $cpants->setup_dirs;
@@ -26,7 +27,7 @@ $cpants->load_generators;
 #-----------------------------------------------------------------
 if (-e 'cpants.db') {
     my $mtime=(stat('cpants.db'))[9];
-    move('cpants.db','cpants_'.DateTime->from_epoch(epoch=>$mtime)->ymd.'.db');
+    move('cpants.db','cpants_'.DateTime->from_epoch(epoch=>$mtime)->week.'.db');
 }
 my $DBH=DBI->connect("dbi:SQLite:dbname=cpants.db");
 $cpants->DBH($DBH);
@@ -43,17 +44,15 @@ chdir(Module::CPANTS::Generator->metricdir);
 opendir(DIR,'.') || die "$!";
 my @files=grep {/\.yml$/} readdir(DIR);
 
-my $progress=Term::ProgressBar->new({
-				     name=>'yaml2sqlite     ',
-				     count=>scalar @files,
-				    }) unless $cpants->conf->no_bar;
-
-foreach my $f (@files) {
+foreach my $f (sort @files) {
     chomp($f);
-    my $metric=LoadFile($f);
-    print $metric->{dist}."\n" if $cpants->conf->no_bar;
+    my $metric=$cpants->read_yaml($f);
+    unless ($metric) {
+        print "missing metric: $f\n";
+        next;
+    }
+    print $metric->{dist}."\n";
     $cpants->yaml2db($metric);
-    $progress->update() unless $cpants->conf->no_bar;
 }
 
 

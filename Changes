@@ -1,12 +1,58 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 86 $
-# $Date: 2004-10-08 17:18:18 +0200 (Fri, 08 Oct 2004) $ 
+# $Rev: 117 $
+# $Date: 2005-02-23 17:21:39 +0100 (Wed, 23 Feb 2005) $ 
 #-----------------------------------------------------------------
+
+2005-02-23
+----------
+* make_site radically enhanced
+* stuff
+* change make_site.pl wuite a lot
+
+
+2005-02-22
+----------
+* removed some debug messages
+* resolved bug caused by CPANPLUS::Module::Author changing it's interface
+
+
+2005-02-20
+----------
+* sorted stuff, so output is clearer
+
+
+2005-02-19
+----------
+* a lot
+
+2005-02-18
+----------
+* removed ProgressBar
+* minor code reshuffling
+* fetch_cpan.pl now uses a combination of CPAN::Mini and Parse::CPAN::Packages
+  resulting in a 10-times speed improvement
+
+
+2004-10-12
+----------
+- added cpants/run and cpants/run_force to enable cronjob testing
+- removed use_warnings metric as suggested by Nicholas Clark and brian d foy
+- rewrote generation of %packges in MCG::CPAN because it used to break
+  on some systems according to tester reports
+
+
+2004-10-10
+----------
+- a dist might have more namespaces (and thus 'use strict's than
+  module files. use_strict was broken because of this.
+  Thanks to brian d foy for spotting this problem.
 
 
 2004-10-08
 ----------
+* released as Module-CPANTS-Generator-0.24
+*-----------------------------------------------------------------
 - tweaked scripts in cpants/ to run better
 - added Generator/Uses.pm
 - added Generator/FindModules.pm
@@ -24,8 +70,10 @@
 
 2004-09-16
 ----------
-** released as Module-CPANTS-Generator-0.23
+* released as Module-CPANTS-Generator-0.23
+*-----------------------------------------------------------------
 - changed version number (at YAPC::Europe::2004)
+
 
 2004-09-15
 ----------

@@ -13,7 +13,8 @@ use lib "$FindBin::Bin/../lib";
 use Module::CPANTS::Generator;
 use YAML qw(:all);
 use DBI;
-use Term::ProgressBar;
+
+print "calc_complex_kwalitee.pl\n".('#'x66)."\n";
 
 my $cpants='Module::CPANTS::Generator';
 $cpants->setup_dirs;
@@ -26,19 +27,20 @@ chdir(Module::CPANTS::Generator->metricdir);
 opendir(DIR,'.') || die "$!";
 my @files=grep {/\.yml$/} readdir(DIR);
 
-my $progress=Term::ProgressBar->new({
-				     name=>'Complex Kwalitee',
-				     count=>scalar @files,
-				    }) unless $cpants->conf->no_bar;
 
-foreach my $f (@files) {
+foreach my $f (sort @files) {
     chomp($f);
-    my $metric=LoadFile($f);
+    my $metric=$cpants->read_yaml($f);
+    unless ($metric) {
+        print "missing metric: $f\n";
+        next;
+    }
+
+    print $f,"\n";
 
     $cpants->determine_kwalitee('complex',$metric);
     $cpants->write_metric($metric);
 
-    $progress->update() unless $cpants->conf->no_bar;
 }
 
 

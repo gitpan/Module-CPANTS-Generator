@@ -1,11 +1,8 @@
---- #YAML:1.0
+---
 name: Module-CPANTS-Generator
-version: 0.24
+version: 0.25
 author:
   - Thomas Klausner <domm@zsi.at> http://domm.zsi.at
-  - |-
-    Please use the perl-qa mailing list for discussing all things CPANTS:
-    http://lists.perl.org/showlist.cgi?name=perl-qa
   - |-
     based on work by Leon Brocard <acme@astray.com> and the original idea
     proposed by Michael G. Schwern <schwern@pobox.com>
@@ -31,7 +28,7 @@ requires:
 provides:
   Module::CPANTS::Generator:
     file: lib/Module/CPANTS/Generator.pm
-    version: 0.24
+    version: 0.25
   Module::CPANTS::Generator::CPAN:
     file: lib/Module/CPANTS/Generator/CPAN.pm
     version: 0.24
@@ -56,4 +53,4 @@ provides:
   text:
     file: lib/Module/CPANTS/Generator/Unpack.pm
     version: 0.24
-generated_by: Module::Build version 0.25
+generated_by: Module::Build version 0.2608

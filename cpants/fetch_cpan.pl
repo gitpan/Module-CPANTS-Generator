@@ -6,30 +6,27 @@
 #
 # First script to run during CPANTS
 #-----------------------------------------------------------------
-
 use strict;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
 use Module::CPANTS::Generator;
-use CPANPLUS;
 use Carp;
-use Term::ProgressBar;
 use YAML qw(:all);
+use Parse::CPAN::Packages;
+use File::Copy;
+use File::Spec::Functions;
 
 my $cpants='Module::CPANTS::Generator';
 $cpants->setup_dirs;
-my $cp=$cpants->get_cpan_backend;
 my $limit=$cpants->conf->limit || 0;
 
-# reload CPAN indices
-unless ($cpants->conf->dont_reload_cpan) {
-    $cp->reload_indices(update_source => 1);
-}
+print "fetch_cpan.pl\n".('#'x66)."\n" unless $cpants->conf->quiet;
 
 # get list of allready downloaded packages
 my %downloaded;
 opendir(DISTS,$cpants->distsdir) || die "cannot open distsdir ".$cpants->distsdir.": $!";
+
 while (my $f=readdir(DISTS)) {
     chomp($f);
     next if $f=~/^\./;
@@ -37,59 +34,55 @@ while (my $f=readdir(DISTS)) {
     $downloaded{$f}=1;
 }
 
+print "parsing 02packages.details.txt.gz ..\n"  unless $cpants->conf->quiet;
 
-# get list of packages on CPAN
+my $p = Parse::CPAN::Packages->new("/home/minicpan/modules/02packages.details.txt.gz");
 my (%seen,@packages);
-foreach my $module (values %{$cp->module_tree}) {
-    my $package=$module->package;
-    next unless $package;
 
-    # skip some stuff
+foreach my $dist (sort {$a->dist cmp $b->dist} $p->latest_distributions) {
+    my $package=$dist->filename;
+    if ($package=~m|/|) {
+        $package=~s|^.*/||;
+    }
+
+    next if $seen{$package};
     next if $package=~/^perl[-\d]/;
     next if $package=~/^ponie-/;
     next if $package=~/^parrot-/;
     next if $package=~/^Bundle-/;
-
-    next if $seen{$package};
+    
     $seen{$package}='new';
 
     if ($downloaded{$package}) {
-	delete $downloaded{$package};
-	print "skip $package\n" if $cpants->conf->no_bar;
-	$seen{$package}='old';
-	next;
+        delete $downloaded{$package};
+        #print "skip $package\n" unless $cpants->conf->quiet;
+        $seen{$package}='old';
+        next;
     }
-
-    push(@packages,$module);
-}
-
-my $progress=Term::ProgressBar->new({
-				     name=>'Fetch from CPAN ',
-				     count=>$limit || scalar @packages,
-				    }) unless $cpants->conf->no_bar;
-
-foreach my $module (@packages) {
-    my $package=$module->package;
-
-    $module->fetch(fetchdir=>$cpants->distsdir);
-    print "fetch $package\n" if $cpants->conf->no_bar;
-
+    
+    my $from=catfile("/home/minicpan/authors/id",$dist->prefix);
+    if (-e $from) {
+        my $to=catfile($cpants->distsdir,$package);
+        print "fetch $package\n" unless $cpants->conf->quiet;
+        copy ($from,$to) || print "cannot copy $from to $to: $!";
+    } else {
+        print "missing in mirror: $package\n" unless $cpants->conf->quiet;
+    }
+    
     if ($limit) {
-	last if scalar keys %seen > $limit;
+        last if scalar keys %seen > $limit;
     }
-
-    $progress->update() unless $cpants->conf->no_bar;
 }
 
 # delete old dists
 foreach my $del (keys %downloaded) {
-    print "purge $del\n" if $cpants->conf->no_bar;
+    print "purge $del\n" unless $cpants->conf->quiet;
     $seen{$del}='del';
     system("rm",$cpants->distsdir."/".$del);
 }
 
+DumpFile(catfile($cpants->distsdir,'dists.yml'),\%seen);
 
-DumpFile('dists.yml',\%seen);
 
 __END__
 
@@ -110,17 +103,15 @@ Doesn't fetch perl/ponie/parrot distributions.
 
 =over
 
+=item quite
+
+Don't output stuff.
+
 =item cpan
 
 Absolut path to a local CPAN mirror.
 
-Default: /home/cpan/
-
-=item  reload_cpan
-
-Reload CPAN indices (see CPANPLUS).
-
-Default: undef
+Default: /home/minicpan/
 
 =item distsdir
 

@@ -7,7 +7,7 @@ use Storable;
 use Data::Dumper;
 use base qw(Class::Accessor Class::Data::Inheritable);
 
-use YAML;
+use YAML qw(:all);
 
 use File::Copy;
 use File::Path;
@@ -19,12 +19,14 @@ use FindBin;
 use DateTime;
 
 use vars qw($VERSION);
-$VERSION = "0.24";
+$VERSION = "0.25";
 
 
 ##################################################################
 # SETUP - AUTOMATIC
 ##################################################################
+
+
 
 #-----------------------------------------------------------------
 # set up classdata and accessors
@@ -45,12 +47,12 @@ $class->mk_accessors
 {
     my $config=AppConfig->new();
     $config->define
-      (qw(force dont_reload_cpan no_authors no_bar print_distname),
+      (qw(force no_authors print_distname quiet),
        qw(limit=s),
        'tempdir=s'=>{DEFAULT=>'temp'},
        'distsdir=s'=>{DEFAULT=>'dists'},
        'metricdir=s'=>{DEFAULT=>'metrics'},
-       'cpan=s'=>{DEFAULT=>'/home/cpan/'},
+       'cpan=s'=>{DEFAULT=>'/home/minicpan/'},
        'generators=@'=>{DEFAULT=>[qw(Unpack Files FindModules Pod Prereq CPAN Uses)]}
       );
     $config->args;
@@ -89,25 +91,31 @@ sub get_cpan_backend {
     my $self=shift;
 
     if ($self->cpan_backend) {
-	return $self->cpan_backend;
+        return $self->cpan_backend;
     }
 
     my $cp;
-
-    eval {$cp=CPANPLUS::Backend->new(conf => {verbose => 0, debug => 0});};
-    return undef if $@;
+    my $local_cpan=$self->conf->cpan;
+    use CPANPLUS::Backend; 
+    eval {$cp=CPANPLUS::Backend->new(conf => {verbose => 0, debug => 0,
+            hosts=>[{
+			     scheme => 'file',
+			     path   => $local_cpan,
+			    }],
+            });};
+    die $@ if $@;
 
     $self->cpan_backend($cp);
 
     # set local cpan mirror if there is one - RECOMMENDED
-    if (my $local_cpan=$self->conf->cpan) {
-	my $cp_conf=$cp->configure_object;
-	$cp_conf->_set_ftp(urilist=>
-			   [{
-			     scheme => 'file',
-			     path   => $local_cpan,
-			    }]);
-    }
+    #if (my $local_cpan=$self->conf->cpan) {
+    #my $cp_conf=$cp->configure_object;
+    #$cp_conf->_set_ftp(urilist=>
+#			   [{
+    # scheme => 'file',
+    #		     path   => $local_cpan,
+    #		    }]);
+    #}
     return $cp;
 }
 
@@ -203,16 +211,14 @@ sub kwalitee_indicators {
     my $class=shift;
     my @kwalitee_indicators;
     foreach my $generator (@{$class->available_generators}) {
-	next unless $generator->kwalitee_definitions;
-	foreach my $kw (@{$generator->kwalitee_definitions}) {
-	    $kw->{defined_in}=$generator;
-	    push(@kwalitee_indicators,$kw);
-	}
+        next unless $generator->kwalitee_definitions;
+        foreach my $kw (@{$generator->kwalitee_definitions}) {
+            $kw->{defined_in}=$generator;
+            push(@kwalitee_indicators,$kw);
+        }
     }
     return \@kwalitee_indicators;
 }
-
-
 
 
 sub total_kwalitee {
@@ -262,40 +268,40 @@ sub yaml2db {
     my (@keys,@vals);
 
     while (my ($k,$v)=each %$metric) {
-	my $ref=ref($v);
-	if (!$ref || $ref eq 'STRING') {
-	    push(@keys,$k);
-	    push(@vals,$v);
-	} elsif ($ref eq 'ARRAY') {
-	    # might be list to stringify or data for another table
-	    my $first=$v->[0];
-	    next unless $first;
-	    if (ref($first) eq 'HASH') {
-		foreach my $sv (@$v) {
-		    my @columns=('distid');
-		    my @data=($distid);
-		    foreach my $sk (keys %$sv) {
-			push(@columns,$sk);
-			my $val=$sv->{$sk};
-			push(@data,$val);
-		    }
-		    $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
-		}
-	    } else {
-		push(@keys,$k);
-		push(@vals,join(',',@$v));
-	    }
-	} elsif ($ref eq 'HASH') {
-	    my @columns=('distid');
-	    my @data=($distid);
-	    foreach my $sk (keys %$v) {
-		push(@columns,$sk);
-		my $val=$v->{$sk};
-		$val=join(',',@$val) if (ref($val) eq 'ARRAY');
-		push(@data,$val);
-	    }
-	    $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
-	}
+        my $ref=ref($v);
+        if (!$ref || $ref eq 'STRING') {
+            push(@keys,$k);
+            push(@vals,$v);
+        } elsif ($ref eq 'ARRAY') {
+            # might be list to stringify or data for another table
+            my $first=$v->[0];
+            next unless $first;
+            if (ref($first) eq 'HASH') {
+                foreach my $sv (@$v) {
+                    my @columns=('distid');
+                    my @data=($distid);
+                    foreach my $sk (keys %$sv) {
+                        push(@columns,$sk);
+                        my $val=$sv->{$sk};
+                        push(@data,$val);
+                    }
+                    $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
+                }
+            } else {
+                push(@keys,$k);
+                push(@vals,join(',',@$v));
+            }
+        } elsif ($ref eq 'HASH') {
+            my @columns=('distid');
+            my @data=($distid);
+            foreach my $sk (keys %$v) {
+                push(@columns,$sk);
+                my $val=$v->{$sk};
+                $val=join(',',@$val) if (ref($val) eq 'ARRAY');
+                push(@data,$val);
+            }
+            $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
+        }
     }
     # insert into dist
     $DBH->do("insert into dist (".join(',',@keys).") values (".join(',',map{'?'}@vals).")",undef,@vals);
@@ -336,6 +342,14 @@ create table kwalitee (
     return \@tables;
 }
 
+
+sub read_yaml {
+    my $class=shift;
+    my $file=shift;
+    my $node;
+    eval {$node=LoadFile($file)};
+    return $node;
+}
 
 
 1;

@@ -40,13 +40,13 @@ sub analyse {
     # find symlinks / bad_permissions
     my (@symlinks,@bad_permissions);
     foreach my $f (@dirs,@files) {
-	my $p=catfile($testdir,$f);
-	if (-l $f) {
-	    push(@symlinks,$f);
-	}
-	unless (-r _ && -w _) {
-	    push(@bad_permissions,$f);
-	}
+        my $p=catfile($testdir,$f);
+        if (-l $f) {
+            push(@symlinks,$f);
+        }
+        unless (-r _ && -w _) {
+            push(@bad_permissions,$f);
+        }
     }
 
     # store stuff
@@ -64,16 +64,16 @@ sub analyse {
     my %reqfiles;
     my @special_files=(qw(Makefile.PL Build.PL README META.yml SIGNATURE MANIFEST NINJA test.pl));
     foreach my $file (@special_files){
-	(my $db_file=$file)=~s/\./_/g;
-	$db_file=lc($db_file);
-	$cpants->{metric}{"file_".$db_file}=((grep {$_ eq "$file"} @files)?1:0);
+        (my $db_file=$file)=~s/\./_/g;
+        $db_file=lc($db_file);
+        $cpants->{metric}{"file_".$db_file}=((grep {$_ eq "$file"} @files)?1:0);
     }
 
     # find special dirs
     my @special_dirs=(qw(lib t));
     foreach my $dir (@special_dirs){
-	my $db_dir="dir_".$dir;
-	$cpants->{metric}{$db_dir}=((grep {$_ eq "$dir"} @dirs)?1:0);
+        my $db_dir="dir_".$dir;
+        $cpants->{metric}{$db_dir}=((grep {$_ eq "$dir"} @dirs)?1:0);
     }
 
     return;
@@ -144,6 +144,29 @@ __PACKAGE__->kwalitee_definitions
 	 return 1 if $m->{file_test_pl} || $m->{dir_t};
 	 return 0;
      },
+    },
+    {
+     name=>'has_test_pod',
+     type=>'basic',
+     error=>q{Doesn't include a test for pod correctness (Test::Pod)},
+     code=>sub {
+        my $m=shift;
+        my $files=$m->{files_list};
+        return 1 if grep {m|t/.*pod\.t|} @$files;
+        return 0;
+        },
+     },
+     {
+     name=>'has_test_pod_coverage',
+     type=>'basic',
+     error=>q{Doesn't include a test for pod coverage (Test::Pod::Coverage)},
+     code=>sub {
+        my $m=shift;
+        my $files=$m->{files_list};
+        return 1 if grep {m|t/.*pod_coverage\.t|} @$files;
+        return 0;
+     },
+
     },
 
 

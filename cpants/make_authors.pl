@@ -12,8 +12,9 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Module::CPANTS::Generator;
 use DBI;
-use Term::ProgressBar ;
 use CPANPLUS::Backend;
+
+print "make_authors.pl\n".('#'x66)."\n";
 
 my $cpants='Module::CPANTS::Generator';
 
@@ -28,7 +29,7 @@ foreach my $sql((
 "create table authors (
   id integer primary key,
   cpanid text,
-  name text,
+  author text,
   email text,
   average_kwalitee integer,
   distcount integer
@@ -44,27 +45,21 @@ foreach my $sql((
 
 my $cp=$cpants->get_cpan_backend;
 
-my $progress=Term::ProgressBar->new({
-				     name=>'create authors  ',
-				     count=>scalar keys %{$cp->author_tree},
-				    }) unless $cpants->conf->no_bar;
 
 my $sth_avg_kwalitee=$DBH->prepare_cached("select avg(kwalitee.kwalitee),count(dist.author) from kwalitee,dist where dist.id=kwalitee.distid AND dist.author=? group by dist.author");
-my $sth_insert_auth=$DBH->prepare_cached("insert into authors (cpanid,name,email,average_kwalitee,distcount) values (?,?,?,?,?)");
+my $sth_insert_auth=$DBH->prepare_cached("insert into authors (cpanid,author,email,average_kwalitee,distcount) values (?,?,?,?,?)");
 
-foreach my $a (values %{$cp->author_tree}) {
-    print $a->cpanid,"\n" if $cpants->conf->no_bar;
-    next unless $a->cpanid;
-    $sth_avg_kwalitee->execute($a->cpanid);
+foreach my $author (sort {$a->cpanid cmp $b->cpanid} values %{$cp->author_tree}) {
+    print $author->cpanid,"\n";
+    next unless $author->cpanid;
+    $sth_avg_kwalitee->execute($author->cpanid);
 
     my ($avg,$cnt)=(0,0);
     if (my @avg=$sth_avg_kwalitee->fetchrow_array) {
-	$avg=$avg[0];
-	$cnt=$avg[1];
-
+        $avg=$avg[0];
+        $cnt=$avg[1];
     }
-    $sth_insert_auth->execute($a->cpanid,$a->name,$a->email,$avg,$cnt);
-    $progress->update() unless $cpants->conf->no_bar;
+    $sth_insert_auth->execute($author->cpanid,$author->author,$author->email,$avg,$cnt);
 }
 
 __END__

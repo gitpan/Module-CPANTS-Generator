@@ -59,21 +59,21 @@ __PACKAGE__->kwalitee_definitions
 	 }
      },
     },
-    {
-     name=>'use_warnings',
-     type=>'basic',
-     error=>q{This distribution does not use 'warnings' in all of its modules.},
-     code=>sub {
-	 my $metric=shift;
-	 my $modules=$metric->{modules} || 0;
-	 return 0 unless $modules;
-	 my $uses=$metric->{uses};
-	 foreach (@$uses) {
-	     next unless $_->{module} eq 'warnings';
-	     return 1 if $modules == $_->{count};
-	 }
-     },
-    },
+#    {
+#     name=>'use_warnings',
+#     type=>'basic',
+#     error=>q{This distribution does not use 'warnings' in all of its modules.},
+#     code=>sub {
+#	 my $metric=shift;
+#	 my $modules=$metric->{modules} || 0;
+#	 return 0 unless $modules;
+#	 my $uses=$metric->{uses};
+#	 foreach (@$uses) {
+#	     next unless $_->{module} eq 'warnings';
+#	     return 1 if $modules <= $_->{count};
+#	 }
+#     },
+#    },
    ]);
 
 

@@ -9,15 +9,17 @@ $VERSION = "0.24";
 
 $cp=Module::CPANTS::Generator->get_cpan_backend;
 
-if ($cp) {
-    %packages=map {$_->package=>{author=>$_->author,dslip=>$_->dslip}}
-      grep {$_->package} values %{$cp->module_tree};
+if ($cp->module_tree) {
+    foreach (values %{$cp->module_tree}) {
+        next unless $_;
+        next unless $_->package;
+        $packages{$_->package}={author=>$_->author->cpanid,dslip=>$_->dslip};
+    }
 }
 
 ##################################################################
 # Analyse
 ##################################################################
-
 sub analyse {
     my $class=shift;
     my $cpants=shift;
@@ -25,7 +27,7 @@ sub analyse {
     my $package=$cpants->package;
     my $cpan=$packages{$package};
     while (my ($k,$v)=each %{$cpan}) {
-	$cpants->{metric}{$k}=$v;
+        $cpants->{metric}{$k}=$v;
     }
     return;
 }

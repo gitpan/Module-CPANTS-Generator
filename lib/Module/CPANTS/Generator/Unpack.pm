@@ -37,7 +37,7 @@ sub analyse {
     my $ext=$di->extension || '';
     my ($major,$minor);
     if ($di->version) {
-	($major,$minor)=$di->version=~/^(\d+)\.(.*)/;
+        ($major,$minor)=$di->version=~/^(\d+)\.(.*)/;
     }
     $major=$di->dist unless defined($major);
 
@@ -57,19 +57,19 @@ sub analyse {
     chdir($cpants->tempdir);
 
     if ($ext eq 'tar.gz' || $ext eq 'tgz') {
-	system("tar xzf $temppath 2>/dev/null");
+        system("tar xzf $temppath 2>/dev/null");
     } elsif ($ext eq 'zip') {
-	system("unzip", "-q", $temppath);
+        system("unzip", "-q", $temppath);
 
 # gz is not supported by CPAN::DistnameInfo
 #    } elsif ($ext eq 'gz') {
 #	system("gzip", "-d", $temppath);
 
     } else {
-	$cpants->{metric}{extractable}=0;
-	$cpants->abort(1);
+        $cpants->{metric}{extractable}=0;
+        $cpants->abort(1);
 #	print "NOT EXTRACTABLE\n";
-	return;
+        return;
     }
     $cpants->{metric}{extractable}=1;
 
@@ -85,14 +85,14 @@ sub analyse {
     my $extracts_nicely=0;
     my $stat;
     if (-d catdir($cpants->tempdir,$di->distvname)) {
-	$extracts_nicely=1;
-	$cpants->testdir(catdir($cpants->tempdir,$di->distvname));
-	$stat=stat($cpants->testdir);
+        $extracts_nicely=1;
+        $cpants->testdir(catdir($cpants->tempdir,$di->distvname));
+        $stat=stat($cpants->testdir);
 
     } else {
-	opendir(DIR,".");
-	my @stuff=grep {/\w/} readdir(DIR);
-	closedir DIR;
+        opendir(DIR,".");
+        my @stuff=grep {/\w/} readdir(DIR);
+        closedir DIR;
 
 	# if there is only one thing in this dir, assume it's a dir
 	# else, get a random .pm file and use its mtime
@@ -140,7 +140,26 @@ __PACKAGE__->kwalitee_definitions
      type=>'basic',
      error=>"The package filename (eg. Foo-Bar-1.42.tar.gz) does not include a version number (or something that looks like a reasonable version number to CPAN::DistnameInfo)",
      code=>sub { shift->{version} ? 1 : 0 }
+    },
+    {
+     name=>'has_proper_version',
+     type=>'basic',
+     error=>"The version number isn't a number. It probably contains letter, which it shouldn't",
+     code=>sub { my $v=shift->{version};
+                 return 0 unless $v;
+                 return 1 if ($v=~/^[\d\.]+$/);
+                 return 0;
+ }
+    },
+
+    
+    {
+     name=>'no_cpants_errors',
+     type=>'basic',
+     error=>"There where problems during CPANTS testing. Those problems are either caused by some very strange behaviour of this distribution or a bug in CPANTS. ",
+     code=>sub { shift->{analyse_errors} ? 0 : 1 }
     }
+
 
    ]);
 
@@ -163,7 +182,8 @@ sub sql_fields_dist {
    size_unpacked integer,
    released_epoch text,
    released_date text,
-";
+   cpants_errors text,
+   ";
 }
 
 1;

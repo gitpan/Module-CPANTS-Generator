@@ -7,13 +7,13 @@
 # Third script to run during CPANTS
 #-----------------------------------------------------------------
 
-
 use strict;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Module::CPANTS::Generator;
-use Term::ProgressBar;
 use YAML qw(:all);
+
+print "calc_basic_kwalitee.pl\n".('#'x66)."\n";
 
 my $cpants='Module::CPANTS::Generator';
 $cpants->setup_dirs;
@@ -23,24 +23,20 @@ chdir($cpants->metricdir);
 opendir(DIR,'.') || die "$!";
 my @files=grep {/\.yml$/} readdir(DIR);
 
-my $progress=Term::ProgressBar->new({
-				     name=>'Basic Kwalitee  ',
-				     count=>scalar @files,
-				    }) unless $cpants->conf->no_bar;
-
-foreach my $f (@files) {
+foreach my $f (sort @files) {
     chomp($f);
-    my $metric=LoadFile($f);
-
-    print $f,"\n" if $cpants->conf->no_bar;
-
+    my $metric=$cpants->read_yaml($f);
+    unless ($metric) {
+        print "missing metric: $f\n";
+        next;
+    }
+    
     # remove old kwalitee, just to make sure...
     delete($metric->{kwalitee});
 
     $cpants->determine_kwalitee('basic',$metric);
     $cpants->write_metric($metric,$f);
-
-    $progress->update() unless $cpants->conf->no_bar;
+    print $metric->{kwalitee}{kwalitee}."\t$f\n";
 }
 
 
