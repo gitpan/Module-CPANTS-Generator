@@ -6,7 +6,7 @@ use base 'Module::CPANTS::Generator';
 use File::Spec::Functions qw(catfile);
 
 use vars qw($VERSION);
-$VERSION = "0.22";
+$VERSION = "0.23";
 
 
 ##################################################################
@@ -33,7 +33,7 @@ sub analyse {
 	    $pod_errors+=$errors;
 	}
     }
-    $cpants->{metric}{pod}{errors}=$pod_errors;
+    $cpants->{metric}{pod_errors}=$pod_errors;
 }
 
 
@@ -48,7 +48,7 @@ __PACKAGE__->kwalitee_definitions
    name=>'no_pod_errors',
    type=>'basic',
    error=>q{The documentation for this distribution contains syntactic errors in it's POD.},
-   code=>sub { shift->{pod}{errors} ? 0 : 1 },
+   code=>sub { shift->{pod_errors} ? 0 : 1 },
    },
  ]);
 
@@ -57,15 +57,10 @@ __PACKAGE__->kwalitee_definitions
 # DB
 ##################################################################
 
-sub create_db {
-    return
-[
-"create table pod (
-  dist varchar(150),
-  errors bigint unsigned default 0
-)",
-"CREATE INDEX pod_dist_idx on pod (dist)"
-];
+sub sql_fields_dist {
+    return "
+pod_errors int,
+"
 }
 
 1;

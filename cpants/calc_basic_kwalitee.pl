@@ -32,6 +32,8 @@ foreach my $f (@files) {
     chomp($f);
     my $metric=LoadFile($f);
 
+    print $f,"\n" if $cpants->conf->no_bar;
+
     # remove old kwalitee, just to make sure...
     delete($metric->{kwalitee});
 
@@ -39,6 +41,7 @@ foreach my $f (@files) {
     $cpants->write_metric($metric);
 
     $progress->update() unless $cpants->conf->no_bar;
+    print "done\n" if $cpants->conf->no_bar;
 }
 
 

@@ -1,17 +1,32 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 66 $
-# $Date: 2004-09-07 10:04:35 +0200 (Tue, 07 Sep 2004) $ 
+# $Rev: 76 $
+# $Date: 2004-09-16 17:03:25 +0200 (Thu, 16 Sep 2004) $ 
 #-----------------------------------------------------------------
 
 
+2004-09-16
+----------
+** released as Module-CPANTS-Generator-0.23
+- changed version number (at YAPC::Europe::2004)
+
+2004-09-15
+----------
+- changed db schema (at YAPC::Europe::2004)
+  and a lot of stuff because of the different schema
+
+
 2004-09-06
+----------
 ** released as Module-CPANTS-Generator-0.22
+- Prereq now actually stores is_required in db
 - added required_by metadata to distribution
 - Prereq: use $metric->{modules} instead of distname
 - added no_bar to more scripts
 
+
 2004-09-03
+----------
 - New Generator: MCG::FindModules:
 	generate list of included modules by looking at *.pm in filelist
 - MC::Generator: load_generators uses new config value 'generators'

@@ -26,16 +26,17 @@ my $progress=Term::ProgressBar->new({
 				     count=>scalar @files,
 				    }) unless $class->conf->no_bar;
 
+
 foreach my $f (@files) {
     next if $f=~/^\./;
     chomp($f);
 
     my $cpants=$class->new($f);
 
-#    print "\n",$cpants->package,"\n" unless $cpants->conf->quiet;
+    print "\n",$cpants->package,"\n" if $cpants->conf->no_bar;
 
     foreach my $generator (@{$cpants->available_generators}) {
-#	print "+ $generator\n" if $cpants->conf->verbose;
+	print "+ $generator\n" if $cpants->conf->no_bar;
 	$generator->analyse($cpants);
 	last if $cpants->abort;
     }

@@ -6,7 +6,7 @@ use File::Find;
 use File::Spec::Functions qw(catdir catfile abs2rel);
 
 use vars qw($VERSION);
-$VERSION = "0.22";
+$VERSION = "0.23";
 
 
 ##################################################################
@@ -28,7 +28,7 @@ sub analyse {
     @dirs=();
     $size=0;
     find(\&get_files,$testdir);
-    $cpants->{metric}{size}{unpacked}=$size;
+    $cpants->{metric}{size_unpacked}=$size;
 
     # munge filelist
     @files=map {abs2rel($_,$testdir)} @files;
@@ -50,15 +50,15 @@ sub analyse {
     }
 
     # store stuff
-    $cpants->{metric}{files}{list_files}=\@files;
-    $cpants->{metric}{files}{list_dirs}=\@dirs;
-    $cpants->{metric}{files}{list_symlinks}=\@symlinks;
-    $cpants->{metric}{files}{list_bad_permissions}=\@bad_permissions;
+    $cpants->{metric}{files}=scalar @files;
+    $cpants->{metric}{files_list}=\@files;
+    $cpants->{metric}{bad_permissions}=scalar @bad_permissions;
+    $cpants->{metric}{bad_permissions_list}=\@bad_permissions;
+    $cpants->{metric}{dirs}=scalar @dirs;
+    $cpants->{metric}{dirs_list}=\@dirs;
+    $cpants->{metric}{symlinks}=scalar @symlinks;
+    $cpants->{metric}{symlinks_list}=\@symlinks;
 
-    $cpants->{metric}{files}{count_files}=scalar @files;
-    $cpants->{metric}{files}{count_dirs}=scalar @dirs;
-    $cpants->{metric}{files}{count_symlinks}=scalar @symlinks;
-    $cpants->{metric}{files}{count_bad_permissions}=scalar @bad_permissions;
 
     # find special files
     my %reqfiles;
@@ -66,14 +66,14 @@ sub analyse {
     foreach my $file (@special_files){
 	(my $db_file=$file)=~s/\./_/g;
 	$db_file=lc($db_file);
-	$cpants->{metric}{files}{$db_file}=((grep {$_ eq "$file"} @files)?1:0);
+	$cpants->{metric}{"file_".$db_file}=((grep {$_ eq "$file"} @files)?1:0);
     }
 
     # find special dirs
     my @special_dirs=(qw(lib t));
     foreach my $dir (@special_dirs){
 	my $db_dir="dir_".$dir;
-	$cpants->{metric}{files}{$db_dir}=((grep {$_ eq "$dir"} @dirs)?1:0);
+	$cpants->{metric}{$db_dir}=((grep {$_ eq "$dir"} @dirs)?1:0);
     }
 
     return;
@@ -105,19 +105,19 @@ __PACKAGE__->kwalitee_definitions
      name=>'has_readme',
      type=>'basic',
      error=>q{The file 'README' is missing from this distribution. The README provide some basic information to users prior to downloading and unpacking the distribution.},
-     code=>sub { shift->{files}{readme} ? 1 : 0 },
+     code=>sub { shift->{file_readme} ? 1 : 0 },
     },
     {
      name=>'has_manifest',
      type=>'basic',
      error=>q{The file 'MANIFEST' is missing from this distribution. The MANIFEST lists all files included in the distribution.},
-     code=>sub { shift->{files}{manifest} ? 1 : 0 },
+     code=>sub { shift->{file_manifest} ? 1 : 0 },
     },
     {
      name=>'has_meta_yml',
      type=>'basic',
      error=>q{The file 'META.yml' is missing from this distribution. META.yml is needed by people maintaining module collections (like CPAN), for people writing installation tools, or just people who want to know some stuff about a distribution before downloading it.},
-     code=>sub { shift->{files}{meta_yml} ? 1 : 0 },
+     code=>sub { shift->{file_meta_yml} ? 1 : 0 },
     },
     {
      name=>'has_buildtool',
@@ -125,7 +125,7 @@ __PACKAGE__->kwalitee_definitions
      error=>q{Makefile.PL and/or Build.PL are missing. This makes installing this distribution hard for humans and impossible for automated tools like CPAN/CPANPLUS},
      code=>sub {
 	 my $m=shift;
-	 return 1 if $m->{files}{makefile_pl} || $m->{files}{build_pl};
+	 return 1 if $m->{file_makefile_pl} || $m->{file_build_pl};
 	 return 0;
      },
     },
@@ -133,7 +133,7 @@ __PACKAGE__->kwalitee_definitions
      name=>'no_symlinks',
      type=>'basic',
      error=>q{This distribution includes symbolic links (symlinks). This is bad, because there are operating systems do not handle symlinks.},
-     code=>sub {shift->{files}{count_symlinks} ? 0 : 1},
+     code=>sub {shift->{symlinks} ? 0 : 1},
     },
     {
      name=>'has_tests',
@@ -141,7 +141,7 @@ __PACKAGE__->kwalitee_definitions
      error=>q{This distribution doesn't contain either a file called 'test.pl' or a directory called 't'. This indicates that it doesn't contain even the most basic test-suite. This is really BAD!},
      code=>sub {
 	 my $m=shift;
-	 return 1 if $m->{files}{test_pl} || $m->{files}{dir_t};
+	 return 1 if $m->{file_test_pl} || $m->{dir_t};
 	 return 0;
      },
     },
@@ -152,7 +152,7 @@ __PACKAGE__->kwalitee_definitions
 #     name=>'permissions_ok',
 #     type=>'basic',
 #     error=>q{This distribution includes files with bad permissions (i.e that are not read- and writable by the user). This makes removing the extracted distribution hard.},
-#     code=>sub { shift->{files}{count_bad_permissions} ? 0 : 1 },
+#     code=>sub { shift->{bad_permissions} ? 0 : 1 },
 #    },
 
 
@@ -164,32 +164,29 @@ __PACKAGE__->kwalitee_definitions
 # DB
 ##################################################################
 
-sub create_db {
+sub sql_fields_dist {
     return
-[
-"create table files (
-  dist varchar(150),
-  count_files int unsigned default 0,
-  count_dirs int unsigned default 0,
-  count_symlinks int unsigned default 0,
-  count_bad_permissions int unsigned default 0,
-  list_files text,
-  list_dirs text,
-  list_symlinks text,
-  list_bad_permissions text,
-  makefile_pl tinyint unsigned not null default 0,
-  build_pl tinyint unsigned not null default 0,
-  readme tinyint unsigned not null default 0,
-  manifest tinyint unsigned not null default 0,
-  meta_yml tinyint unsigned not null default 0,
-  signature tinyint unsigned not null default 0,
-  ninja tinyint unsigned not null default 0,
-  test_pl tinyint unsigned not null default 0,
-  dir_lib tinyint unsigned not null default 0,
-  dir_t tinyint unsigned not null default 0
-)",
-"CREATE INDEX file_dist_idx on files (dist)"
-];
+"
+  files int,
+  files_list text,
+  dirs int,
+  dirs_list text,
+  symlinks int,
+  symlinks_list text,
+  bad_permissions int,
+  bad_permissions_list text,
+
+  file_makefile_pl int,
+  file_build_pl int,
+  file_readme int,
+  file_manifest int,
+  file_meta_yml int,
+  file_signature int,
+  file_ninja int,
+  file_test_pl int,
+  dir_lib int,
+  dir_t int,
+";
 }
 
 1;

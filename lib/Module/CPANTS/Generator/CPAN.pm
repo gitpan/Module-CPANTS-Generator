@@ -5,12 +5,13 @@ use base 'Module::CPANTS::Generator';
 use CPANPLUS::Backend;
 
 use vars qw($VERSION $cp %packages);
-$VERSION = "0.22";
+$VERSION = "0.23";
 
 $cp=Module::CPANTS::Generator->get_cpan_backend;
 
-%packages=map {$_->package=>{cpanid=>$_->author,dslip=>$_->dslip}}
+%packages=map {$_->package=>{author=>$_->author,dslip=>$_->dslip}}
   grep {$_->package} values %{$cp->module_tree};
+
 
 ##################################################################
 # Analyse
@@ -21,8 +22,10 @@ sub analyse {
     my $cpants=shift;
 
     my $package=$cpants->package;
-
-    $cpants->{metric}{cpan}=$packages{$package};
+    my $cpan=$packages{$package};
+    while (my ($k,$v)=each %{$cpan}) {
+	$cpants->{metric}{$k}=$v;
+    }
     return;
 }
 
@@ -37,16 +40,11 @@ sub analyse {
 # DB
 ##################################################################
 
-sub create_db {
-    return
-["create table cpan (
-  dist varchar(150),
-  cpanid varchar(10),
-  dslip varchar(10)
-)",
-"CREATE INDEX cpan_dist_idx on cpan (dist)",
-
-];
+sub sql_fields_dist {
+    return "
+author text,
+dslip text,
+";
 }
 
 1;

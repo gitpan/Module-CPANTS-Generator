@@ -19,7 +19,7 @@ use FindBin;
 use DateTime;
 
 use vars qw($VERSION);
-$VERSION = "0.22";
+$VERSION = "0.23";
 
 
 ##################################################################
@@ -52,7 +52,6 @@ $class->mk_accessors
        'metricdir=s'=>{DEFAULT=>'metrics'},
        'cpan=s'=>{DEFAULT=>'/home/cpan/'},
        'generators=@'=>{DEFAULT=>[qw(Unpack Files FindModules Pod Prereq CPAN)]}
-       #   'tests=s@'=>{DEFAULT=>['Init']},
       );
     $config->args;
     $class->conf($config);
@@ -129,8 +128,6 @@ sub new {
     $self->dist($di->distvname || $package);
 
     $self->metricfile(catfile($class->metricdir,$self->dist.'.yml'));
-
-    $self->{metric}{dist}=$self->dist;
 
     return $self;
 }
@@ -250,46 +247,55 @@ sub yaml2db {
     my $metric=shift;
     my $DBH=$class->DBH;
     my $dist=$metric->{dist};
-    delete $metric->{dist};
+    my (@keys,@vals,@other_tables);
 
     while (my ($k,$v)=each %$metric) {
 	my $ref=ref($v);
 	if (!$ref || $ref eq 'STRING') {
-#	    $v=$$v if ref eq 'STRING';
-#	    print "There shouldn't be any strings in a metrics hash for: dist $dist key: $k value: $v\n";
-
-	    # no-op
-
+	    push(@keys,$k);
+	    push(@vals,$v);
 	} elsif ($ref eq 'ARRAY') {
-	    foreach my $row (@$v) {
-		my @columns=('dist');
-		my @data=($dist);
-		foreach my $sk (keys %$row) {
-		    push(@columns,$sk);
-		    my $sval=$row->{$sk};
-		    if (defined($sval)) {
-			if ($sval =~ /\0/) {  # Binary Null in prereq of  Astro::Aladin not handled by SQLite
-			    $sval=undef;
-			}
+	    # might be list to stringify or data for another table
+	    my $first=$v->[0];
+	    next unless $first;
+	    if (ref($first) eq 'HASH') {
+		foreach my $sv (@$v) {
+		    my @columns=('distid','dist');
+		    my @data=('DISTID',$dist);
+		    foreach my $sk (keys %$sv) {
+			push(@columns,$sk);
+			my $val=$sv->{$sk};
+			push(@data,$val);
 		    }
-		    $sval=join(',',@$sval) if (ref($sval) eq 'ARRAY');
-		    push(@data,$sval);
+		    my $sql="insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")";
+		    push(@other_tables,$sql);
 		}
-		$DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{'?'}@data).")",undef,@data);
+	    } else {
+		push(@keys,$k);
+		push(@vals,join(',',@$v));
 	    }
-
 	} elsif ($ref eq 'HASH') {
-	    my @columns=('dist');
-	    my @data=($dist);
+	    my @columns=('distid','dist');
+	    my @data=('DISTID',$dist);
 	    foreach my $sk (keys %$v) {
 		push(@columns,$sk);
 		my $val=$v->{$sk};
 		$val=join(',',@$val) if (ref($val) eq 'ARRAY');
 		push(@data,$val);
 	    }
-	    $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{'?'}@data).")",undef,@data);
+	    my $sql="insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")";
+	    push(@other_tables,$sql);
 	}
     }
+    # insert into dist
+    $DBH->do("insert into dist (".join(',',@keys).") values (".join(',',map{'?'}@vals).")",undef,@vals);
+    my $id=$DBH->func('last_insert_rowid');
+
+    foreach my $sql (@other_tables) {
+	$sql=~s/DISTID/$id/;
+	$DBH->do($sql);
+    }
+
     return;
 }
 
@@ -299,11 +305,14 @@ sub create_kwalitee_table {
 
     my @sql_kw="
 create table kwalitee (
-   dist varchar(150),
-   kwalitee int default 0";
+   id integer primary key,
+   distid integer,
+   dist text,
+   
+   kwalitee integer";
 
     foreach my $kw (@{$class->kwalitee_indicators}) {
-	push(@sql_kw,"   ".$kw->{name}." int default 0");
+	push(@sql_kw,"   ".$kw->{name}." integer");
     }
     return (join(",\n",@sql_kw)."\n)");
 }

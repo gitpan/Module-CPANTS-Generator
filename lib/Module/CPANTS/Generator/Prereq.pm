@@ -7,7 +7,7 @@ use YAML qw(:all);
 use Module::MakefilePL::Parse;
 
 use vars qw($VERSION);
-$VERSION = "0.22";
+$VERSION = "0.23";
 
 ##################################################################
 # Analyse
@@ -125,15 +125,16 @@ __PACKAGE__->kwalitee_definitions
 	 my $DBH=Module::CPANTS::Generator->DBH;
 	 my $required_by=0;
 
-	 my $modules=$metric->{modules};
+	 my $modules=$metric->{modules_in_dist};
 	 foreach (@$modules) {
 	     my $module=$_->{module};
 	     $required_by+=$DBH->selectrow_array("select count(dist) from prereq where requires=?",undef,$module);
 	 }
 
-	 $metric->{distribution}{required_by}=$required_by if $required_by>0;
-
-#	 $DBH->do("update distribution set required_by=? where dist=?",undef,$required_by,$metric->{dist}) if $required_by>0;
+	 if ($required_by>0) {
+	     $metric->{required_by}=$required_by;
+	     $DBH->do("update dist set required_by=? where dist=?",undef,$required_by,$metric->{dist});
+	 }
 
 	 if ($required_by>2) {
 	     $DBH->do("update kwalitee set kwalitee=?,is_prereq=1 where dist=?",undef,$metric->{kwalitee}{kwalitee}+1,$metric->{dist}) || die "foo $!";
@@ -149,16 +150,22 @@ __PACKAGE__->kwalitee_definitions
 # DB
 ##################################################################
 
-sub create_db {
+sub sql_fields_dist {
+    return "
+required_by integer,
+";
+}
+
+sub sql_other_tables {
     return
 [
 "create table prereq (
-  dist varchar(150),
-  requires varchar(150),
-  version varchar(25)
-)",
-"CREATE INDEX prereq_dist_idx on prereq (dist)"
-];
+  id integer primary key,
+  distid integer,
+  dist text,
+  requires text,
+  version text
+)"];
 }
 
 

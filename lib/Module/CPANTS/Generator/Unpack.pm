@@ -8,7 +8,7 @@ use File::Spec::Functions qw(catdir catfile);
 use File::stat;
 
 use vars qw($VERSION);
-$VERSION = "0.22";
+$VERSION = "0.23";
 
 
 ##################################################################
@@ -28,7 +28,6 @@ sub analyse {
 	# read in old file and check 'generated_with'
 	# dont skip if version is newer
 	if (-e $cpants->metricfile) {
-	    print "\tallready tested, skipping\n" unless $cpants->conf->quiet;
 	    $cpants->abort(1);
 	    return;
 	}
@@ -42,8 +41,9 @@ sub analyse {
     }
     $major=$di->dist unless defined($major);
 
-    $cpants->{metric}{distribution}=
+    $cpants->{metric}=
       {
+       dist=>$cpants->dist,
        package=>$di->filename,
        extension=>$ext,
        version=>$di->version,
@@ -66,17 +66,17 @@ sub analyse {
 #	system("gzip", "-d", $temppath);
 
     } else {
-	$cpants->{metric}{distribution}{extractable}=0;
+	$cpants->{metric}{extractable}=0;
 	$cpants->abort(1);
 #	print "NOT EXTRACTABLE\n";
 	return;
     }
-    $cpants->{metric}{distribution}{extractable}=1;
+    $cpants->{metric}{extractable}=1;
 
 
     # size
     my $size_packed=-s $temppath;
-    $cpants->{metric}{size}{packed}=$size_packed;
+    $cpants->{metric}{size_packed}=$size_packed;
 
     # remove tarball
     unlink($cpants->temppath);
@@ -107,9 +107,9 @@ sub analyse {
 	    $stat=stat(catfile($cpants->testdir,$file));
 	}
     }
-    $cpants->{metric}{distribution}{extracts_nicely}=$extracts_nicely;
-    $cpants->{metric}{release}{epoch}=$stat->mtime;
-    $cpants->{metric}{release}{date}=localtime($stat->mtime);
+    $cpants->{metric}{extracts_nicely}=$extracts_nicely;
+    $cpants->{metric}{released_epoch}=$stat->mtime;
+    $cpants->{metric}{released_date}=localtime($stat->mtime);
 
     chdir($cpants->testdir);
     return;
@@ -127,19 +127,19 @@ __PACKAGE__->kwalitee_definitions
      name=>'extractable',
      type=>'basic',
      error=>q{This package uses an unknown packaging format. CPANTS can handle tar.gz, tgz and zip archives. No kwalitee metrics have been calculated.},
-     code=>sub { shift->{distribution}{extractable} ? 0.5 : -1 },
+     code=>sub { shift->{extractable} ? 0.5 : -1 },
     },
     {
      name=>'extracts_nicely',
      type=>'basic',
      error=>q{This package doesn't create a directory and extracts its content into this directory. Instead, it spews its content into the current directory, making it really hard/annoying to remove the unpacked package.},
-     code=>sub { shift->{distribution}{extracts_nicely} ? 1 : 0},
+     code=>sub { shift->{extracts_nicely} ? 1 : 0},
     },
     {
      name=>'has_version',
      type=>'basic',
      error=>"The package filename (eg. Foo-Bar-1.42.tar.gz) does not include a version number (or something that looks like a reasonable version number to CPAN::DistnameInfo)",
-     code=>sub { shift->{distribution}{version} ? 1 : 0 }
+     code=>sub { shift->{version} ? 1 : 0 }
     }
 
    ]);
@@ -149,39 +149,22 @@ __PACKAGE__->kwalitee_definitions
 # DB
 ##################################################################
 
-sub create_db {
+sub sql_fields_dist {
     return
-[
-"create table distribution (
-  dist varchar(150),
-  dist_without_version varchar(150),
-  package varchar(150),
-  version varchar(50),
-  version_major bigint,
-  version_minor varchar(30),
-  extension varchar(25),
-  extracts_nicely tinyint unsigned not null default 0,
-  extractable tinyint unsigned not null default 0,
-  required_by int not null default 0
-)",
-"CREATE INDEX dist_dist_idx on distribution (dist)",
-
-"create table size (
-  dist varchar(150),
-  packed bigint default 0,
-  unpacked bigint default 0
-)",
-"CREATE INDEX size_dist_idx on size (dist)",
-
-"create table release (
-  dist varchar(150),
-  epoch bigint default 0,
-  date date
-)",
-"CREATE INDEX release_dist_idx on release (dist)"
-
-
-];
+      "dist text,
+       package text,
+       dist_without_version text,
+       version text,
+       version_major text,
+       version_minor text,
+       extension text,
+       extractable int,
+       extracts_nicely int,
+       size_packed int,
+       size_unpacked int,
+       released_epoch text,
+       released_date text,
+      ";
 }
 
 1;

@@ -30,19 +30,33 @@ if (-e 'cpants.db') {
 my $DBH=DBI->connect("dbi:SQLite:dbname=cpants.db");
 $cpants->DBH($DBH);
 
-# create tables from CPANTS::Generators
-foreach my $generator (@{$cpants->available_generators}) {
-    my $sql_create=$generator->create_db;
-    foreach my $sql (@$sql_create) {
-#	print "$sql\n" if $cpants->conf->verbose;
-	$DBH->do($sql);
+# create dist table and var tables from CPANTS::Generators
+{
+    my $flds;
+    my @other_tables;
+    foreach my $generator (@{$cpants->available_generators}) {
+	$flds.=$generator->sql_fields_dist if $generator->can('sql_fields_dist');
+	push(@other_tables,@{$generator->sql_other_tables}) if $generator->can('sql_other_tables');
     }
+    # cleanup flds
+    $flds=~s/,\s+$//;
+
+    $DBH->do("
+create table dist (id integer primary key,
+generated_at text,
+generated_with,
+$flds
+)");
+
+    foreach (@other_tables) {
+	$DBH->do($_);
+    }
+
 }
 
 # create kwalitee table
 {
     my $sql=$cpants->create_kwalitee_table;
-#    print "$sql\n" if $cpants->conf->verbose;
     $DBH->do($sql);
 }
 
@@ -62,7 +76,7 @@ my $progress=Term::ProgressBar->new({
 foreach my $f (@files) {
     chomp($f);
     my $metric=LoadFile($f);
-    print $metric->{dist}."\n" if $cpants->conf->print_distname;
+    print $metric->{dist}."\n" if $cpants->conf->no_bar;
     $cpants->yaml2db($metric);
     $progress->update() unless $cpants->conf->no_bar;
 }
