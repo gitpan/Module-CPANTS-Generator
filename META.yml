@@ -1,0 +1,14 @@
+--- #YAML:1.0
+name: Module-CPANTS-Generator
+version: 0.001
+license: perl
+distribution_type: module
+requires:
+  CPANPLUS: 0.042
+  DBD::SQLite: 0.25
+  Template: 2.08
+  Test::More: 0.01
+recommends: {}
+build_requires: {}
+conflicts: {}
+generated_by: Module::Build version 0.16

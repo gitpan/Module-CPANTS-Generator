@@ -1,0 +1,51 @@
+This file contains message digests of all files listed in MANIFEST,
+signed via the Module::Signature module, version 0.21.
+
+To verify the content in this distribution, first make sure you have
+Module::Signature installed, then type:
+
+    % cpansign -v
+
+It would check each file's integrity, as well as the signature's
+validity.  If "==> Signature verified OK! <==" is not displayed,
+the distribution may already have been compromised, and you should
+not run its Makefile.PL or Build.PL.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SHA1 97ed3534f374133071003ec35e13fec2d3433015 Build.PL
+SHA1 f3c180cb7fa7940e6055055bba1ded8033388e1a Changes
+SHA1 aaa21201be0cfae5671f39cbe4e26e1597888177 MANIFEST
+SHA1 5f4577e720bab392bee45878124143e0e85be0e4 MANIFEST.SKIP
+SHA1 d0fe2da66a3b9bfcb157e0ef188cc93fff86d491 META.yml
+SHA1 d036594aeb9979294ef015726266d56a00d735de Makefile.PL
+SHA1 a7cb605606bab073a9f8fdf677035b5496f6cdb9 Module-CPANTS/Build.PL
+SHA1 645a4cf2efed603957651173be22737de53952bc Module-CPANTS/Changes
+SHA1 b31c17ce1e0dadcf2ad2c68016df8c8ff9728479 Module-CPANTS/MANIFEST
+SHA1 9028c7b6d429b7a769ddb9c28dc36b1cdb4d6718 Module-CPANTS/MANIFEST.SKIP
+SHA1 e13b283fe09f343907522f9fac4f16326a711ca1 Module-CPANTS/META.yml
+SHA1 ac578d9c737ab8792294023aa8e348bbf4dc59a2 Module-CPANTS/Makefile.PL
+SHA1 af6609a7e8872de32d61a547642a3706e25a9deb Module-CPANTS/README
+SHA1 5ee46b12d28b4493e15dfd5b9b568f6409bf153f Module-CPANTS/SIGNATURE
+SHA1 6e3c692b0a09cb0349777fae48b8280b0ab45c3b Module-CPANTS/examples/graph_deps.pl
+SHA1 0bca64552f24b3c19512bf8860d1d4a11bb10a08 Module-CPANTS/examples/view.pl
+SHA1 ff4877d38e71c43941ea4880f41bb6967ab8ee69 Module-CPANTS/lib/Module/CPANTS.tt
+SHA1 48e3ee556e3dd70385383ce4e8eaf0eb4580b6eb Module-CPANTS/t/signature.t
+SHA1 5d0a362b9134d202535f195aa5877cbbc1b34689 Module-CPANTS/t/simple.t
+SHA1 e68f23d27e4b4505cb6b4652d3b70f529c272d9e README
+SHA1 242861ffe5fa171e397611ccbcbfc585a083dc1a examples/generate.pl
+SHA1 fa21716eecd694608d4b5d293a5786fe7a7ab3e7 examples/view.pl
+SHA1 7f7036963618ff490530f6e55ca737ab39892f23 lib/Module/CPANTS/Generator.pm
+SHA1 e61cfaf2520fb07253d458d33d755f11e577863b lib/Module/CPANTS/Generator/Files.pm
+SHA1 0922a1d7a22acff0354c4379a3fb1811737c0a03 lib/Module/CPANTS/Generator/ModuleInfo.pm
+SHA1 13c07a2bcea60e07872f64b31117103679eebb79 lib/Module/CPANTS/Generator/Prereq.pm
+SHA1 2a9b8cd64ebaee116d718899d324aa5160ddcc66 lib/Module/CPANTS/Generator/Unpack.pm
+SHA1 48e3ee556e3dd70385383ce4e8eaf0eb4580b6eb t/signature.t
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.2.1 (GNU/Linux)
+
+iD8DBQE+hcxMsgWvvfGvuWoRAuXvAKCsEQ2qxngus2FUWvZVBNj6B3BLwgCgvmjs
+bS2xif0JEJS0cDDkRVhj8Fc=
+=eOhj
+-----END PGP SIGNATURE-----
