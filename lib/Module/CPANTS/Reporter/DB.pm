@@ -4,13 +4,18 @@ use base 'Module::CPANTS::Reporter';
 use strict;
 use warnings;
 
-use vars(qw($DBH $tables));
+use vars(qw($VERSION $DBH $tables));
+$VERSION = "0.011";
 
 sub init {
     my $class=shift;
     my $cpants=shift;
     my $dbi_connect=$cpants->conf->dbi_connect;
     $DBH=DBI->connect(@$dbi_connect);
+
+    $DBH->do("drop table flaws");
+    my $flaw_sql=$class->get_create_flaw_table($cpants);
+    $DBH->do($flaw_sql);
 }
 
 sub DBH {
@@ -48,8 +53,10 @@ sub report {
 		foreach my $sk (keys %$row) {
 		    push(@columns,$sk);
 		    my $sval=$row->{$sk};
-		    if ($sval =~ /\0/) {  # Binary Null in prereq of  Astro::Aladin not handled by SQLite
- 			$sval=undef;
+		    if (defined($sval)) {
+			if ($sval =~ /\0/) {  # Binary Null in prereq of  Astro::Aladin not handled by SQLite
+			    $sval=undef;
+			}
 		    }
 		    push(@data,$sval);
 		}
@@ -68,6 +75,11 @@ sub report {
     }
     $DBH->do("insert into cpants (".join(',',@cpants_columns).") values (".join(',',map{'?'}@cpants_data).")",undef,@cpants_data);
 
+    my @flaws=@{$metric->flaws};
+    if (@flaws) {
+	$DBH->do("insert into flaws (dist,".join(',',@flaws).") values (?,".join(',',map{'?'}@flaws).")",undef,$metric->dist,map{1}@flaws);
+    }
+
     return;
 }
 
@@ -77,7 +89,7 @@ sub get_tables {
     my $class=shift;
     my $data=shift;
     if (!$tables) {
-	my @tables=('cpants');
+	my @tables=(qw(cpants flaws));
 	while (my ($k,$v)=each %$data) {
 	    if (ref($v)) {
 		push(@tables,$k);
@@ -86,6 +98,20 @@ sub get_tables {
 	$tables=\@tables;
     }
     return $tables;
+}
+
+sub get_create_flaw_table {
+    my $class=shift;
+    my $cpants=shift;
+
+    my $kdef=$cpants->kwalitee_defs;
+    my $sql="
+create table flaws (
+  dist varchar(150),";
+
+    $sql.=join(",",map {"$_ tinyint not null default 0"} sort keys %$kdef);
+    $sql.=")";
+    return $sql;
 }
 
 1;

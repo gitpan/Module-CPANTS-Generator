@@ -6,6 +6,9 @@ use warnings;
 use FindBin;
 use File::Spec::Functions;
 
+use vars qw($VERSION);
+$VERSION = "0.011";
+
 use vars(qw($DBH $tables));
 
 sub init {
@@ -25,6 +28,9 @@ sub init {
 	    $DBH->do($sql);
 	}
     }
+
+    my $flaw_sql=$class->get_create_flaw_table($cpants);
+    $DBH->do($flaw_sql);
 }
 
 sub DBH {

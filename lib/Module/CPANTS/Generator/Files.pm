@@ -3,6 +3,9 @@ use warnings;
 use strict;
 use base 'Module::CPANTS::Generator';
 
+use vars qw($VERSION);
+$VERSION = "0.011";
+
 use vars(qw(%kwalitee));
 
 %kwalitee=
@@ -50,8 +53,11 @@ sub generate {
 	}
     }
 
-    $metric->note(scalar @symlinks,'has_symlinks');
-    $metric->note(scalar @bad_permissions,'has_bad_permissions');
+    my $num_sl=@symlinks;
+    my $num_bp=@bad_permissions;
+
+    $metric->note($num_sl==0,'has_symlinks');
+    $metric->note($num_bp==0,'has_bad_permissions');
 
     my %reqfiles;
     foreach my $file (qw(Makefile.PL Build.PL configure README META.yml SIGNATURE MANIFEST test.pl t lib)) {
@@ -71,9 +77,9 @@ sub generate {
 
     $metric->add(files=>{
 			 num_files=>scalar @$files,
-			 symlinks=>scalar @symlinks,
+			 symlinks=>$num_sl,
 			 list_symlinks=>join(';',@symlinks),
-			 bad_permissions=>scalar @bad_permissions,
+			 bad_permissions=>$num_bp,
 			 list_bad_permissions=>join(';',@bad_permissions),
 			 %reqfiles,
 			 });
@@ -106,7 +112,6 @@ sub create_db {
 "CREATE INDEX file_dist_idx on files (dist)"
 ];
 }
-
 
 1;
 __END__

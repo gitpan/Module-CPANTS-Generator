@@ -4,6 +4,9 @@ use warnings;
 use Data::Dumper;
 use base 'Module::CPANTS::Reporter';
 
+use vars qw($VERSION);
+$VERSION = "0.011";
+
 our %data;
 
 sub init { return }

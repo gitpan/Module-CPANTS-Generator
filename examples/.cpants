@@ -9,6 +9,7 @@ tests = Files
 tests = Prereq
 
 # reporters
+reporter = STDOUT
 reporter = DB
 reporter = asSQLite
 reporter = asHash

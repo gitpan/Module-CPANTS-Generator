@@ -1,3 +1,10 @@
+
+* lint.pl
+* run cpants.pl without M:C:Reporter:DB
+
+
+Leons old TODO-List:
+
  http://search.cpan.org/src/SBURKE/Pod-Simple-0.97/ChangeLog
  * Rewrote Pod::Simple::Pullparser's get_title, and added
    get_version, get_author, and get_description.  Documented them.

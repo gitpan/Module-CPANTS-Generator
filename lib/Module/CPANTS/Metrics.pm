@@ -4,14 +4,18 @@ use warnings;
 use base 'Class::Accessor';
 use Carp;
 
+use vars qw($VERSION);
+$VERSION = "0.011";
+
 my $class=__PACKAGE__;
-$class->mk_accessors(qw(dist cpants data files distnameinfo error unpacked kwalitee));
+$class->mk_accessors(qw(dist cpants data files distnameinfo error unpacked kwalitee flaws));
 
 sub new {
     my $class=shift;
     my $cpants=shift;
     my $self=bless {},$class;
     $self->data({});
+    $self->flaws([]);
     $self->cpants($cpants);
     $self->kwalitee(0);
     return $self;
@@ -75,13 +79,16 @@ sub note {
 	$k+=$test->{k};
 	$self->kwalitee($k);
     } else {
-	push(@{$self->{flaws}},$testid);
+	$self->add_flaw($testid);
     }
     return;
 }
 
-sub flaws {
-    return shift->{flaws};
+sub add_flaw {
+    my $self=shift;
+    my $flaw=shift;
+    push(@{$self->{flaws}},$flaw);
+    return;
 }
 
 1;
@@ -190,15 +197,19 @@ it's C<report> method, passing the Metrics object as an argument.
 C<note> is called from L<Module::CPANTS::Generator> subclasses to add
 kwalitee or a flaw.
 
-C<$test_value> is a boolean value. C<$kwalitee_definition> a key in the global kwalitee definition, e.g. 'no_version'.
+C<$test_value> is a boolean value. C<$kwalitee_definition> a key in
+the global kwalitee definition, e.g. 'no_version'.
 
-If C<$test_value> is true, than the kwalitee provided by this test will be added to the total kwalitee.
+If C<$test_value> is true, than the kwalitee provided by this test
+will be added to the total kwalitee.
 
-If C<$test_value> is false, this kwalitee definition will be stored in the L<flaws>-array of the Metrics object.
+If C<$test_value> is false, this kwalitee definition will be stored in
+the L<flaws>-array of the Metrics object.
 
-=head3 flaws
+=head3 add_flaw
 
-accessor to the list of flaws
+Convient method to add a flaw to the list of flaws. Most of the time
+you should use L<note> instead.
 
 =head2 Accessor Methods provided by Class::Accessor
 
@@ -232,9 +243,13 @@ Path to unpacked distribution
 
 Current kwalitee. Makes most sense after all test are run.
 
+=head3 flaws
+
+ARRAYREF of the list of flaws
+
 =head3 error
 
-Error Message. Currently only used when a package cannot be unpacked.
+Set to a true value if an error occured during unpacking.
 
 =head1 AUTHOR
 

@@ -3,6 +3,9 @@ use warnings;
 use strict;
 use base 'Module::CPANTS::Generator';
 
+use vars qw($VERSION);
+$VERSION = "0.011";
+
 use vars(qw(%kwalitee));
 
 
@@ -23,7 +26,7 @@ sub generate {
 
     return unless $prereq_file;
 
-    open(IN,$prereq_file);
+    open(IN,$prereq_file) || return;# print "$prereq_file: $!";
     my $m = join '', <IN>;
     close IN;
 

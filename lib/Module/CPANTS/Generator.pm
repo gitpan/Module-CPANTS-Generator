@@ -16,7 +16,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION $run_id $kwalitee_defs);
-$VERSION = "0.010";
+$VERSION = "0.011";
 
 Module::CPANTS::Generator->mk_accessors
   (qw(conf total_kwalitee tests reporter));
@@ -29,7 +29,7 @@ sub new {
 
     my $config=AppConfig->new();
     $config->define
-      (qw(quiet force reload_cpan),
+      (qw(quiet verbose force reload_cpan),
        qw(cpan=s limit=s),
        'temp_dir=s'=>{DEFAULT=>catdir($FindBin::Bin,'temp')},
        'unpack_dir=s'=>{DEFAULT=>catdir($FindBin::Bin,'unpacked')},
@@ -54,7 +54,7 @@ sub load_tests {
     my $self=shift;
     my $tests=$self->conf->tests;
     my $total_kwalitee;
-    print "Loading Test Modules\n" unless $self->conf->quiet;
+    print "Loading Test Modules\n" if $self->conf->verbose;
 
     no strict 'refs';
 
@@ -62,23 +62,24 @@ sub load_tests {
 	$test="Module::CPANTS::Generator::$test";
 	eval "require $test";
 	croak "cannot load $test: $@\n" if $@;
-	print "+ loaded $test\n" unless $self->conf->quiet;
+	print "+ loaded $test\n" if $self->conf->verbose;
 
 	my $local_k_def=$test."::kwalitee";
 	while(my($def,$info)=each %$local_k_def) {
 	    croak "duplicate test definition: $def in $test\n" if $kwalitee_defs->{$def};
+	    my $lk=(defined $info->[2]?$info->[2]:1);
 	    $kwalitee_defs->{$def}=
 	      {
 	       short=>$info->[0],
 	       long=>$info->[1] || "no long descriptio, here is the short one: ".$info->[0],
-	       k=>$info->[2] || 1,
+	       k=>$lk,
 	       class=>$test,
 	      };
-	    $total_kwalitee+=$info->[2] || 1;
+	    $total_kwalitee+=$lk;
 	}
     }
     $self->total_kwalitee($total_kwalitee);
-    print "Total Kwalitee available: $total_kwalitee\n" unless $self->conf->quiet;
+    print "Total Kwalitee available: $total_kwalitee\n" if $self->conf->verbose;
 
     $self->tests($tests);
     return;
@@ -89,14 +90,14 @@ sub load_tests {
 sub load_reporter {
     my $self=shift;
     my $reporter=$self->conf->reporter;
-    print "Loading Reporter Modules\n" unless $self->conf->quiet;
+    print "Loading Reporter Modules\n" if $self->conf->verbose;
 
     foreach my $rep (@$reporter) {
 	$rep="Module::CPANTS::Reporter::$rep";
 	eval "require $rep";
 	croak "cannot load $rep: $@\n" if $@;
 	$rep->init($self);
-	print "+ loaded $rep\n" unless $self->conf->quiet;
+	print "+ loaded $rep\n" if $self->conf->verbose;
     }
     $self->reporter($reporter);
     return;
@@ -117,15 +118,13 @@ sub unpack {
 
     my $di=CPAN::DistnameInfo->new($path);
     $metric->distnameinfo($di);
-    $metric->dist($di->distvname);
-
-    print "+ ".$di->filename."\n";
+    $metric->dist($di->distvname || $path);
 
     my $size_packed=-s $path;
 
     # extract
 #    my $ext=$di->archive_extn;
-    my $ext=$di->extension;
+    my $ext=$di->extension || '';
     if ($ext eq 'tar.gz' || $ext eq 'tgz') {
 	system("tar", "xzf", $path);
     } elsif ($ext eq 'zip') {
@@ -136,7 +135,8 @@ sub unpack {
 		     kwalitee=>0,
 		     kwalitee_abs=>"0/".$self->total_kwalitee,
 		    );
-	$metric->error("unknown package format: ",$di->filename,", skipping test of package\n");
+	$metric->add_flaw('unknown_package_type');
+	$metric->error(1);#"unknown package format: ",$di->filename,", skipping test of package\n");
 	return $metric;
     }
 
@@ -154,7 +154,7 @@ sub unpack {
 	if (-e $target) {
 	    # hmm, extraction happend allready, we're skipping moving
 	    # but skipping extraction might be a better idea...
-	    print "\tpackage allready unpacked, skipping extraction\n";
+#	    print "\tpackage allready unpacked, skipping extraction\n";
 	    rmtree $stuff[0] || die "ERROR $!";
 	} else {
 	    move($stuff[0],$target) || die "ERROR $!";
@@ -162,20 +162,24 @@ sub unpack {
 
     } else {
 	# not a proper tarball...
-	print "\tnot a proper tarball\n";
+#	$metric->add_flaw('unknown_package_type');
+#	print "\tnot a proper tarball\n";
 	my $fakedir=$di->distvname;
  	$target=catdir($unpack_dir,$fakedir);
 	if (-e $target) {
-	    print "\tpackage allready unpacked, skipping extration\n";
+#	    print "\tpackage allready unpacked, skipping extration\n";
 	    rmtree $temp_dir || die "ERROR $!";
 	} else {
 	    mkdir($target) || die "ERROR $!";
-	    print "\tmove to $target\n";
+#	    print "\tmove to $target\n";
 	    move($temp_dir,$target) || die "ERROR $!";
 	}
     }
 
-    my ($major,$minor)=$di->version=~/^(\d+)\.(.*)/;
+    my ($major,$minor);
+    if ($di->version) {
+	($major,$minor)=$di->version=~/^(\d+)\.(.*)/;
+    }
     $major||=$di->dist;
 
     $metric->unpacked($target);
@@ -314,9 +318,9 @@ you want to test distributions on CPAN and thus are not needed in
 
 =head2 Boolean values
 
-=head3 quiet
+=head3 verbose
 
-Supress output
+Print some informational output to STDOUT
 
 Default: undef
 

@@ -9,6 +9,10 @@ use Carp;
 use File::Spec::Functions;
 use File::Copy;
 
+use vars qw($VERSION);
+$VERSION = "0.011";
+
+
 our %data;
 
 sub init { return }

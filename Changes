@@ -1,5 +1,20 @@
 Revision history for Perl module Module::CPANTS::Generator.
 
+
+0.011 2003-12-08
+	- removed a bug in M:C:G:Files that caused all dists
+ 	  to get a 'has_symlinks' flaw
+	- added new reporter: Module::CPANTS::Reporter::STDOUT
+	  that prints short info about each dist to SDTDOUT
+	- added get_create_flaw_table to M:C:R:DB
+	- added	flaw-reporting to M:C:R:DB. One can now query a table
+          called 'flaws' for flaw-information per distribtion
+
+0.010 2003-12-06
+	- first release after rewrite
+	- to much changes to list here, please RTFM
+
+
 0.006 Sat Sep  6 10:13:31 BST 2003
 	- get better match for the main module in a distribution for
 	  the description getting, spotted by Pierre Denis

@@ -5,6 +5,9 @@ use base 'Module::CPANTS::Generator';
 use File::Find;
 use File::stat;
 
+use vars qw($VERSION);
+$VERSION = "0.011";
+
 use vars(qw(%kwalitee @files $size));
 
 %kwalitee=
@@ -18,6 +21,13 @@ use vars(qw(%kwalitee @files $size));
    [q{No version number in package filename.},
     "The package filename (eg. Foo-Bar-1.42.tar.gz) does not include a version number (or something that looks like a reasonable version number to CPAN::DistnameInfo)",
    ],
+
+   unknown_package_type=>
+   [q{Unknown package type).},
+    q{This package uses an unknown packageing format. CPANTS can handle tar.gz, tgz and zip archives.},
+    0,
+   ],
+
   );
 
 

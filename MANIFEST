@@ -14,6 +14,7 @@ lib/Module/CPANTS/Generator/Files.pm
 lib/Module/CPANTS/Generator/Prereq.pm
 lib/Module/CPANTS/Metrics.pm
 lib/Module/CPANTS/Reporter.pm
+lib/Module/CPANTS/Reporter/STDOUT.pm
 lib/Module/CPANTS/Reporter/DB.pm
 lib/Module/CPANTS/Reporter/DataDumper.pm
 lib/Module/CPANTS/Reporter/asHash.pm

@@ -9,9 +9,8 @@ use Module::CPANTS::Generator;
 # get object
 my $cpants=Module::CPANTS::Generator->new;
 
-
 # CPANPLUS
-print "Loading CPANPLUS\n";
+print "Loading CPANPLUS\n" if $cpants->conf->verbose;
 my $cp=CPANPLUS::Backend->new(conf => {verbose => 0, debug => 0});
 
 # set local cpan mirror if there is one - RECOMMENDED
@@ -24,8 +23,9 @@ if (my $local_cpan=$cpants->conf->cpan) {
 			}]);
 }
 
+# reload CPAN indices
 if ($cpants->conf->reload_cpan) {
-    print "+ reload CPAN indices\n";
+    print "+ reload CPAN indices\n" if $cpants->conf->verbose;
     $cp->reload_indices(update_source => 1);
 }
 
@@ -48,16 +48,15 @@ foreach my $module (sort { $a->module cmp $b->module } values %{$cp->module_tree
     next if $seen{$package}++;   # allready seen
 
     my $metric=$cpants->unpack_cpanplus($module);
-
-    if (my $emsg=$metric->error) {
-	print $emsg;
+    if ($metric->error) { # besser vielleicht $metric->unpack_ok
+	$metric->report;
 	next;
     }
 
     # run tests
     chdir($metric->unpacked);
     foreach my $testclass (@{$cpants->tests}) {
-	print "\trunning $testclass\n";
+	print "\trunning $testclass\n" if $cpants->conf->verbose;
 	$testclass->generate($metric);
     }
     $metric->report;
@@ -73,3 +72,28 @@ foreach my $rep (@{$cpants->reporter}) {
 
 # TODO: clean up
 # delete all dirs in $unpack_dir that are not in %seen
+
+
+__END__
+
+=pod
+
+=head1 NAME
+
+cpants.pl - run Module::CPANTS::Generator on CPAN
+
+=head1 DESCRIPTION
+
+This script is running Kwalitee tests against all distributions on CPAN.
+
+=head1 AUTHOR
+
+Thomas Klausner <domm@zsi.at> http://domm.zsi.at
+
+=head1 LICENSE
+
+cpants.pl is Copyright (c) 2003 Thomas Klausner, ZSI.
+All rights reserved.
+
+You may use and distribute this module according to the same terms
+that Perl is distributed under.

@@ -3,6 +3,10 @@ use strict;
 use warnings;
 use Carp;
 
+use vars qw($VERSION);
+$VERSION = "0.011";
+
+
 sub init {
     croak("'init' is a virtual method. It must be implemented in subclass of Module::CPANTS::Reporter.");
 }
