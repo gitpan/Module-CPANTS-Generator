@@ -1,5 +1,10 @@
 Revision history for Perl module Module::CPANTS:
 
+0.005 Sun Apr 13 15:59:42 BST 2003
+	- more recent data
+	- now includes CPAN testers data (the number of PASSes
+	  and FAILs)
+
 0.004 Wed Apr  2 22:02:59 BST 2003
 	- more recent data
 	- now include description even for distributions not in

@@ -80,7 +80,11 @@ The actual information currently returned is as follows:
       'Scalar-List-Utils-1.11.tar.gz',
       'Test-Harness-2.26.tar.gz',
       'Test-Simple-0.47.tar.gz'
-    ]
+    ],
+    'testers' => {
+      'fail' => 1,
+      'pass' => 5,
+    },
   }
 
 The "author" field is the PAUSE ID of the author of the distribution.
@@ -102,6 +106,9 @@ distribution.
 The "requires_recursive" is the same as "requires" but lists the
 recursive dependencies. This should be all the distributions that the
 distribution needs to run.
+
+The "testers" field contains the number of passes and fails reported
+by the CPAN testers (http://testers.cpan.org/).
 
 More data is to be added soon.
 

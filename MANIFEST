@@ -25,5 +25,6 @@ lib/Module/CPANTS/Generator.pm
 lib/Module/CPANTS/Generator/Files.pm
 lib/Module/CPANTS/Generator/ModuleInfo.pm
 lib/Module/CPANTS/Generator/Prereq.pm
+lib/Module/CPANTS/Generator/Testers.pm
 lib/Module/CPANTS/Generator/Unpack.pm
 t/signature.t

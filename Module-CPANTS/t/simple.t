@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use_ok("Module::CPANTS");
 
@@ -32,3 +32,9 @@ is_deeply($rr, [
           'Test-Harness-2.26.tar.gz',
           'Test-Simple-0.47.tar.gz'
 ]);
+
+my $testers = $data->{testers};
+is_deeply($testers, {
+      'fail' => 1,
+      'pass' => 5,
+});

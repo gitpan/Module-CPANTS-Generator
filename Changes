@@ -1,5 +1,8 @@
 Revision history for Perl module Module::CPANTS::Generator.
 
+0.003 Sun Apr 13 15:59:42 BST 2003
+	- include CPAN testers data
+
 0.002 Wed Apr  2 22:02:59 BST 2003
 	- now kept in a subversion repository
 	- now get description from the POD of the main module in the

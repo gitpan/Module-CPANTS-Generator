@@ -6,11 +6,12 @@ use lib "$FindBin::Bin/../lib";
 use Module::CPANTS::Generator::Files;
 use Module::CPANTS::Generator::ModuleInfo;
 use Module::CPANTS::Generator::Prereq;
+use Module::CPANTS::Generator::Testers;
 use Module::CPANTS::Generator::Unpack;
 use Storable;
 use Template;
 
-my $version = "0.004";
+my $version = "0.005";
 
 my $unpacked = "$FindBin::Bin/../unpacked/";
 
@@ -26,6 +27,11 @@ if (-d $unpacked) {
   $u->directory($unpacked);
   $u->unpack;
 }
+
+print "* Generating CPAN testers info...\n";
+my $t = Module::CPANTS::Generator::Testers->new;
+$t->directory($unpacked);
+#$t->generate;
 
 print "* Generating module info...\n";
 my $m = Module::CPANTS::Generator::ModuleInfo->new;
