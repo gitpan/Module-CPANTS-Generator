@@ -7,6 +7,9 @@ my $build = Module::Build->new(
   requires    => {
     'CPANPLUS'    => '0.042',
     'DBD::SQLite' => '0.25',
+    'File::Find::Rule' => '0.01',
+    'Pod::POM'  => '0.01',
+    'String::Approx'  => '0.01',
     'Template'    => '2.08',
     'Test::More'  => '0.01',
   },

@@ -7,3 +7,9 @@ WriteMakefile(
   'PREREQ_PM' => {'Test::More' => '0.01', 'CPANPLUS' => '0.042' },
   'PL_FILES' => {},
 );
+
+sub MY::libscan {
+    my $path = $_[1];
+    return '' if $path =~ /\B\.svn\b/;
+    return $path;
+}

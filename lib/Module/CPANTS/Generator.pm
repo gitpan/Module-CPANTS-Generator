@@ -1,7 +1,7 @@
 package Module::CPANTS::Generator;
 use strict;
 use vars qw($VERSION);
-$VERSION = "0.001";
+$VERSION = "0.002";
 
 # Errr, does nothing atm
 

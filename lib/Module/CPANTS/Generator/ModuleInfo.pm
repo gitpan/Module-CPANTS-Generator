@@ -1,8 +1,13 @@
 package Module::CPANTS::Generator::ModuleInfo;
 use strict;
 use Carp;
+use Cwd;
 use CPANPLUS;
+use File::Find::Rule;
+use Pod::POM;
 use Storable;
+use String::Approx qw(adist);
+
 use vars qw($VERSION);
 $VERSION = "0.002";
 
@@ -21,6 +26,15 @@ sub cpanplus {
   }
 }
 
+sub directory {
+  my($self, $dir) = @_;
+  if (defined $dir) {
+    $self->{DIR} = $dir;
+  } else {
+    return $self->{DIR};
+  }
+}
+
 sub generate {
   my $self = shift;
 
@@ -29,6 +43,11 @@ sub generate {
     $cpants = retrieve("cpants.store");
   };
   # warn $@ if $@;
+
+  my $origdir = cwd;
+
+  my $dir = $self->directory || croak("No directory specified");
+  chdir $dir || croak("Could not chdir into $dir");
 
   my $cp = $self->cpanplus || croak("No CPANPLUS object");
 
@@ -39,13 +58,81 @@ sub generate {
     my $package = $module->package;
     next unless $package;
     next if $seen{$package}++;
-    my $author = $module->author;
-    my $description = $module->description;
-    $cpants->{$package}->{author} = $author;
-    $cpants->{$package}->{description} = $description;
+
+    if (not exists $cpants->{$package}->{author}) {
+      my $author = $module->author;
+      $cpants->{$package}->{author} = $author;
+    }
+
+    if (not exists $cpants->{$package}->{description}) {
+      my $description = $module->description;
+      $description ||= $self->get_description($module->module, $package);
+      $cpants->{$package}->{description} = $description;
+    }
   }
 
+  chdir $origdir;
   store($cpants, "cpants.store");
+}
+
+sub get_description {
+  my($self, $module, $package) = @_;
+  my $cpanplus = $self->cpanplus;
+
+  # get all the files in the package
+  my @files = File::Find::Rule->file()
+    ->name('*.pm')
+    ->in($package);
+
+  # find the main file in the package
+
+print "* $package *\n";
+  my $bestfile;
+  my $bestscore = 1000;
+  foreach my $file (@files) {
+    my $origfile = $file;
+    $file =~ s/$package//;
+    $file =~ s{/}{-}g;
+    $file =~ s/^-//;
+    $file =~ s/\.pm$//;
+#    my $dist = adist($package, $file);
+    my $dist = abs(adist($file, $package));
+#    print "$file: $dist\n";
+    if ($dist < $bestscore) {
+      $bestfile = $origfile;
+      $bestscore = $dist;
+    }
+  }
+  print "  $bestfile\n";
+
+  # parse the file and try and get the description
+
+  my $parser = Pod::POM->new();
+
+  my($name, $description);
+
+  eval {
+    my $pom = $parser->parse($bestfile)
+      || return undef;
+
+    foreach my $head1 ($pom->head1()) {
+      my $title = $head1->title;
+      next unless "$title" eq 'NAME';
+      my $content = $head1->content;
+      $content =~ s/\n/ /g;
+      $content =~ s/ +/ /g;
+      $content =~ s/ $//g;
+      ($name, $description) = split /- ?/, $content, 2;
+      print "  $description\n";
+      last;
+    }
+  };
+
+  if ($@) {
+    print "  NOT FOUND DESCRIPTION\n";
+  }
+
+  return $description;
 }
 
 1;
@@ -68,7 +155,8 @@ Module::CPANTS::Generator::ModuleInfo - Find author, description
 
 This module is part of the beta CPANTS project. It goes through the
 CPANPLUS module tree and adds information about distribution author
-and description.
+and description. If the description is missing, it tries to find it
+from the POD of the main module in the distribution.
 
 =head1 AUTHOR
 

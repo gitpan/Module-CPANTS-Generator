@@ -1,5 +1,10 @@
 Revision history for Perl module Module::CPANTS:
 
+0.004 Wed Apr  2 22:02:59 BST 2003
+	- more recent data
+	- now include description even for distributions not in
+	  the modules list
+
 0.003 Sat Mar 29 16:30:26 GMT 2003
 	- split into Module::CPANTS and Module::CPANTS::Generator
 	- added interesting files

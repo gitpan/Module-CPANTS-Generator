@@ -10,12 +10,12 @@ use Module::CPANTS::Generator::Unpack;
 use Storable;
 use Template;
 
-my $version = "0.003";
+my $version = "0.004";
 
 my $unpacked = "$FindBin::Bin/../unpacked/";
 
 my $cpanplus = CPANPLUS::Backend->new(conf => {verbose => 0, debug => 0});
-$cpanplus->reload_indices(update_source => 1);
+#$cpanplus->reload_indices(update_source => 1);
 
 if (-d $unpacked) {
   print "* Using existing unpacked CPAN\n";
@@ -30,6 +30,7 @@ if (-d $unpacked) {
 print "* Generating module info...\n";
 my $m = Module::CPANTS::Generator::ModuleInfo->new;
 $m->cpanplus($cpanplus);
+$m->directory($unpacked);
 $m->generate;
 
 print "* Generating module prerequisites...\n";
