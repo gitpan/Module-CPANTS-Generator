@@ -7,7 +7,7 @@ use YAML qw(:all);
 use Module::MakefilePL::Parse;
 
 use vars qw($VERSION);
-$VERSION = "0.24";
+$VERSION = "0.26";
 
 ##################################################################
 # Analyse
@@ -21,93 +21,39 @@ sub analyse {
 
     my $prereq;
     if (grep {/^META\.yml$/} @$files) {
-	my $yaml;
-	eval {
-	    $yaml=LoadFile(catfile($testdir,'META.yml'));
-	};
-	if ($yaml) {
-	    if ($yaml->{requires}) {
-		$prereq=$yaml->{requires};
-		store_prereq($cpants,$prereq);
-		return;
-	    }
-	}
+        my $yaml;
+        eval {
+            $yaml=LoadFile(catfile($testdir,'META.yml'));
+        };
+
+        if ($yaml) {
+            if ($yaml->{requires}) {
+                $prereq=$yaml->{requires};
+            }
+        }
+    } elsif (grep {/^Build\.PL$/} @$files) {
+        open(IN,catfile($cpants->testdir,'Build.PL')) || return;
+        my $m=join '', <IN>;
+        close IN;
+        my($requires) = $m =~ /requires.*?=>.*?\{(.*?)\}/s;
+        eval "{ no strict; \$prereq = { $requires \n} }";
+        
+    } else {
+        open(IN,catfile($cpants->testdir,'Makefile.PL')) || return;
+        my $m=join '', <IN>;
+        close IN;
+
+        my($requires) = $m =~ /PREREQ_PM.*?=>.*?\{(.*?)\}/s;
+        $requires||='';
+        eval "{ no strict; \$prereq = { $requires \n} }";
     }
 
-    if (grep {/^Build\.PL$/} @$files) {
-	eval {
-	    $prereq=parse_prereq($cpants,'Build.PL');
-	};
-	if ($prereq) {
-	    store_prereq($cpants,$prereq);
-	    return;
-	}
+    return unless $prereq;
+    foreach my $ver (values %$prereq) {
+        $ver||=0;
+        $ver=0 unless $ver=~/[\d\._]+/;
     }
-
-    if (grep {/^Makefile\.PL$/} @$files) {
-	my $prereq;
-	eval {
-	    open(my $fh,catfile($cpants->testdir,'Makefile.PL'));
-	    # hier kommt manchmal Warnungen:
-	    # Warning: possible variable references at /home/domm/perl/Module-CPANTS-Generator/cpants/../lib/Module/CPANTS/Generator/Prereq.pm line 49
-	    # oder
-	    # Argument "v1.20.3" isn't numeric in addition (+) at /usr/local/share/perl/5.8.3/Module/MakefilePL/Parse.pm line 74, <$fh> line 14.
-	    # Bareword "Glib::" refers to nonexistent package at (eval 2550) line 1, <$fh> line 153.
-	    my $parser=Module::MakefilePL::Parse->new(join("",<$fh>));
-	    $prereq=$parser->required;
-	};
-	if ($prereq) {
-	    store_prereq($cpants,$prereq);
-	    return;
-	}
-    }
-    return;
-}
-
-sub store_prereq {
-    my $cpants=shift;
-    my $prereq=shift;
-
-    my @prereq;
-    while (my ($module,$version)=each%$prereq) {
-	push(@prereq,{
-		      requires=>$module,
-		      version=>$version,
-		     });
-    }
-
-    $cpants->{metric}{prereq}=\@prereq;
-}
-
-
-sub parse_prereq {
-    my $cpants=shift;
-    my $file=shift;
-
-    open(IN,catfile($cpants->testdir,$file)) || return;
-    my $m = join '', <IN>;
-    close IN;
-
-    my $p;
-    if ($file eq 'Makefile.PL') {
-	$p = $1 if $m =~ m/PREREQ_PM.*?=>.*?\{(.*?)\}/s;
-    } elsif ($file eq 'Build.PL') {
-	$p = $1 if $m =~ m/requires.*?=>.*?\{(.*?)\}/s;
-    }
-    return unless $p;
-
-    # get rid of lines which are only comments
-    $p = join "\n", grep { $_ !~ /^\s*#/ } split "\n", $p;
-    # get rid of empty lines
-    $p = join "\n", grep { $_ !~ /^\s*$/ } split "\n", $p;
-
-    if ($p =~ /=>/ or $p =~ /,/) {
-	my $prereqs;
-
-	my $code = "{no strict; \$prereqs = { $p\n}}";
-	eval $code;
-	return $prereqs;
-    }
+    $cpants->{metric}{prereq}=$prereq;
 }
 
 ##################################################################
@@ -193,7 +139,7 @@ based on work by Leon Brocard <acme@astray.com>
 
 =head1 COPYRIGHT
 
-Module::CPANTS::Metrics is Copyright (c) 2003,2004 Thomas Klausner, ZSI.
+Module::CPANTS::Generator is Copyright (c) 2003,2004,2004 Thomas Klausner, ZSI.
 All rights reserved.
 
 You may use and distribute this module according to the same terms

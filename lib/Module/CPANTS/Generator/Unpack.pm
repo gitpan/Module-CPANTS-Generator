@@ -8,7 +8,7 @@ use File::Spec::Functions qw(catdir catfile);
 use File::stat;
 
 use vars qw($VERSION);
-$VERSION = "0.24";
+$VERSION = "0.26";
 
 
 ##################################################################
@@ -157,7 +157,7 @@ __PACKAGE__->kwalitee_definitions
      name=>'no_cpants_errors',
      type=>'basic',
      error=>"There where problems during CPANTS testing. Those problems are either caused by some very strange behaviour of this distribution or a bug in CPANTS. ",
-     code=>sub { shift->{analyse_errors} ? 0 : 1 }
+     code=>sub { shift->{cpants_errors} ? 0 : 1 }
     }
 
 

@@ -12,6 +12,7 @@ cpants/calc_complex_kwalitee.pl
 cpants/fetch_cpan.pl
 cpants/yaml2sqlite.pl
 cpants/make_authors.pl
+cpants/make_site.pl
 cpants/print_db_schema.pl
 cpants/print_kwalitee_indicators.pl
 cpants/metrics/README

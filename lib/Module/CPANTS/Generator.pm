@@ -19,13 +19,12 @@ use FindBin;
 use DateTime;
 
 use vars qw($VERSION);
-$VERSION = "0.25";
+$VERSION = "0.26";
 
 
 ##################################################################
 # SETUP - AUTOMATIC
 ##################################################################
-
 
 
 #-----------------------------------------------------------------
@@ -292,15 +291,25 @@ sub yaml2db {
                 push(@vals,join(',',@$v));
             }
         } elsif ($ref eq 'HASH') {
-            my @columns=('distid');
-            my @data=($distid);
-            foreach my $sk (keys %$v) {
-                push(@columns,$sk);
-                my $val=$v->{$sk};
-                $val=join(',',@$val) if (ref($val) eq 'ARRAY');
-                push(@data,$val);
+            if ($k eq 'uses_in_tests' || $k eq 'uses') {
+                while (my($mod,$cnt)=each%$v) {
+                    $DBH->do("insert into $k (distid,module,count) values (?,?,?)",undef,$distid,$mod,$cnt || 0);
+                }
+            } elsif ($k eq 'prereq') {
+                while (my($req,$ver)=each%$v) {
+                    $DBH->do("insert into $k (distid,requires,version) values (?,?,?)",undef,$distid,$req,$ver);
+                }
+            } else {
+                my @columns=('distid');
+                my @data=($distid);
+                foreach my $sk (keys %$v) {
+                    push(@columns,$sk);
+                    my $val=$v->{$sk};
+                    $val=join(',',@$val) if (ref($val) eq 'ARRAY');
+                    push(@data,$val);
+                }
+                $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
             }
-            $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
         }
     }
     # insert into dist
@@ -420,15 +429,9 @@ http://www.pobox.com/~schwern/talks/CPANTS/full_slides/
 
 =item *
 
-Slides of my talk given at a Vienna.pm Techmeet in September 2003
+Slides of my talk given at FOSDEM 2005
 
-http://domm.zsi.at/talks/vienna_pm200309/
-
-=item *
-
-Paper for the Proceedings of YAPC::Europe::2003
-
-http://cpants.dev.zsi.at/cpants_paper.html
+http://domm.zsi.at/talks/2005_brussels_cpants/
 
 =back
 
@@ -444,7 +447,7 @@ proposed by Michael G. Schwern <schwern@pobox.com>
 
 =head1 LICENSE
 
-Module::CPANTS::Generator is Copyright (c) 2003,2004 Thomas Klausner, ZSI.
+Module::CPANTS::Generator is Copyright (c) 2003,2004,2005 Thomas Klausner, ZSI.
 All rights reserved.
 
 You may use and distribute this module according to the same terms

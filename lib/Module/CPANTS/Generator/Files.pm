@@ -6,7 +6,7 @@ use File::Find;
 use File::Spec::Functions qw(catdir catfile abs2rel);
 
 use vars qw($VERSION);
-$VERSION = "0.24";
+$VERSION = "0.26";
 
 
 ##################################################################
@@ -144,29 +144,6 @@ __PACKAGE__->kwalitee_definitions
 	 return 1 if $m->{file_test_pl} || $m->{dir_t};
 	 return 0;
      },
-    },
-    {
-     name=>'has_test_pod',
-     type=>'basic',
-     error=>q{Doesn't include a test for pod correctness (Test::Pod)},
-     code=>sub {
-        my $m=shift;
-        my $files=$m->{files_list};
-        return 1 if grep {m|t/.*pod\.t|} @$files;
-        return 0;
-        },
-     },
-     {
-     name=>'has_test_pod_coverage',
-     type=>'basic',
-     error=>q{Doesn't include a test for pod coverage (Test::Pod::Coverage)},
-     code=>sub {
-        my $m=shift;
-        my $files=$m->{files_list};
-        return 1 if grep {m|t/.*pod_coverage\.t|} @$files;
-        return 0;
-     },
-
     },
 
 

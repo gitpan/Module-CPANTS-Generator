@@ -4,7 +4,7 @@ use strict;
 use base 'Module::CPANTS::Generator';
 
 use vars qw($VERSION);
-$VERSION = "0.24";
+$VERSION = "0.26";
 
 
 ##################################################################

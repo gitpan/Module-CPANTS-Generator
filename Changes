@@ -1,8 +1,22 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 117 $
-# $Date: 2005-02-23 17:21:39 +0100 (Wed, 23 Feb 2005) $ 
+# $Rev: 121 $
+# $Date: 2005-03-02 15:24:20 +0100 (Wed, 02 Mar 2005) $ 
 #-----------------------------------------------------------------
+
+2005-03-02
+----------
+* changed back to selfwritten Makefile.PL parser
+* simplified prereq calculation
+
+
+2005-02-28
+----------
+* made yaml2sqlite for uses(_in_tests) easier/clearer
+* type on Prereq.pm
+* resolved has_pod_coverage_test bug
+* corrected a problem with cpants_errors
+
 
 2005-02-23
 ----------
