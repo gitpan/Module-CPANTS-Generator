@@ -4,7 +4,7 @@ use Cwd;
 use Storable;
 use strict;
 use vars qw($VERSION);
-$VERSION = "0.004";
+$VERSION = "0.005";
 
 sub new {
   my $class = shift;
@@ -76,7 +76,7 @@ __END__
 
 =head1 NAME
 
-Module::CPANTS::Generator
+Module::CPANTS::Generator - Generate Module::CPANTS
 
 =head1 DESCRIPTION
 

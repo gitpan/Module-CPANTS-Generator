@@ -1,5 +1,11 @@
 Revision history for Perl module Module::CPANTS::Generator.
 
+0.005 Sun Apr 27 10:25:28 BST 2003
+	- incorporated patch by Casey West to get the number of lines
+	  of comments in a distribution
+	- moved view.pl from YAML to Data::Dumper
+	- remoeved DBD::SQLite from prereqs as we're not using it yet
+
 0.004 Mon Apr 21 19:25:18 BST 2003
 	- incorporated patches by Richard Clamp to refactor the code
 	  and a new metric: lines of pod vs. lines of code

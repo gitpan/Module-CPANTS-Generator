@@ -29,7 +29,7 @@ is_deeply($rr, [
           'File-Spec-0.82.tar.gz',
           'Graphics-ColorNames-0.32.tar.gz',
           'Scalar-List-Utils-1.11.tar.gz',
-          'Test-Harness-2.26.tar.gz',
+          'Test-Harness-2.28.tar.gz',
           'Test-Simple-0.47.tar.gz'
 ]);
 
@@ -44,4 +44,5 @@ is_deeply($lines, {
       'nonpod' => 170,
       'pod' => 95,
       'total' => 265,
+      'with_comments' => 8,
 });

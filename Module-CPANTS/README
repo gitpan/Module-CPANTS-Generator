@@ -1,4 +1,4 @@
-TITLE
+NAME
     Module::CPANTS - CPAN Module Testing
 
 SYNOPSIS
@@ -29,7 +29,18 @@ DESCRIPTION
 
       'Acme-Colour-0.20.tar.gz' => {
         'author' => 'LBROCARD',
-        'description' => '',
+        'description' => 'additive and subtractive human-readable colours',
+        'files' => [
+          'Makefile.PL',
+          'README',
+          'MANIFEST'
+        ],
+        'lines' => {
+          'nonpod' => 170,
+          'pod' => 95,
+          'total' => 265,
+          'with_comments' => 8
+        },
         'requires' => [
           'Graphics-ColorNames-0.32.tar.gz',
           'Scalar-List-Utils-1.11.tar.gz',
@@ -46,13 +57,25 @@ DESCRIPTION
           'Scalar-List-Utils-1.11.tar.gz',
           'Test-Harness-2.26.tar.gz',
           'Test-Simple-0.47.tar.gz'
-        ]
+        ],
+        'testers' => {
+          'fail' => 1,
+          'pass' => 5,
+        },
       }
 
     The "author" field is the PAUSE ID of the author of the distribution.
 
-    The "description" field is the desciption listed in the CPAN modules
+    The "description" field is the description listed in the CPAN modules
     list for the distribibution.
+
+    The "lines" field shows the number of pod lines (documentation), non-pod
+    lines (code), lines with comments, and total lines in all the modules in
+    a distribution.
+
+    The "files" field is a listref containing interesting files which were
+    found. The following files are deemed interesting at the moment:
+    Makefile.PL, README, Build.PL, META.yml, SIGNATURE, MANIFEST.
 
     The "requires_module" field is a hashref containing the module
     prerequisites listed in the Makefile.PL for the distribution.
@@ -65,7 +88,10 @@ DESCRIPTION
     recursive dependencies. This should be all the distributions that the
     distribution needs to run.
 
-    More data is to be added soon.
+    The "testers" field contains the number of passes and fails reported by
+    the CPAN testers (http://testers.cpan.org/).
+
+    More data is to be added soon. A metric may be added soon.
 
     Note that CPANPLUS is very useful for relating modules to distributions.
 

@@ -13,7 +13,7 @@ use Module::CPANTS::Generator::Unpack;
 use Storable;
 use Template;
 
-my $version = "0.20030421";
+my $version = "0.20030426";
 
 my $unpacked = "$FindBin::Bin/../unpacked/";
 

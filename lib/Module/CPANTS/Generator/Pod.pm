@@ -12,7 +12,7 @@ sub generate {
     foreach my $dist (sort grep { -d } <*>) {
         next if $dist =~ /^\./;
         print "* $dist *\n";
-        my ($lines, $pod) = (0, 0);
+        my ($lines, $pod, $with_comments) = (0, 0, 0);
         for my $file (find( file => name => '*.{pod,pm}', in => $dist )) {
             open my $fh, "$file" or next;
             # worlds stupidest pod parser - incorrect but quick
@@ -20,13 +20,18 @@ sub generate {
             while (<$fh>) {
                 /^=/     and $inpod = 1;
                 /^=cut$/ and $inpod = 0;
-                $pod++ if $inpod;
+                $pod++           if $inpod;
+                $with_comments++ if (not $inpod)
+                    && /#/ && (not /(\b([ysmq]|q[qrxw]|tr))#/);
                 $lines++;
             }
         }
-        $cpants->{ $dist }{lines} = { total  => $lines,
-                                      pod    => $pod,
-                                      nonpod => $lines - $pod };
+        $cpants->{ $dist }{lines} = {
+          total         => $lines,
+          with_comments => $with_comments,
+          pod           => $pod,
+          nonpod        => $lines - $pod,
+        };
     }
     $self->save_cpants( $cpants );
 }

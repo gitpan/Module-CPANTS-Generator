@@ -68,6 +68,7 @@ The actual information currently returned is as follows:
       'nonpod' => 170,
       'pod' => 95,
       'total' => 265,
+      'with_comments' => 8
     },
     'requires' => [
       'Graphics-ColorNames-0.32.tar.gz',
@@ -98,8 +99,8 @@ The "description" field is the description listed in the CPAN modules
 list for the distribibution.
 
 The "lines" field shows the number of pod lines (documentation),
-non-pod lines (code), and total lines in all the modules in a
-distribution.
+non-pod lines (code), lines with comments, and total lines in all the
+modules in a distribution.
 
 The "files" field is a listref containing interesting files which were
 found. The following files are deemed interesting at the moment: 

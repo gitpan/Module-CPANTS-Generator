@@ -1,5 +1,13 @@
 Revision history for Perl module Module::CPANTS:
 
+0.20030426 Sun Apr 27 10:43:07 BST 2003
+	- more recent data
+	- now include lines of comments, thanks to Casey West
+
+0.20030421 Wed Apr 23 21:10:11 BST 2003
+	- more recent data
+	- now includes lines of pod / non-pod, thanks to Richard Clamp
+
 0.005 Sun Apr 13 15:59:42 BST 2003
 	- more recent data
 	- now includes CPAN testers data (the number of PASSes

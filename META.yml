@@ -1,11 +1,10 @@
 --- #YAML:1.0
 name: Module-CPANTS-Generator
-version: 0.004
+version: 0.005
 license: perl
 distribution_type: module
 requires:
   CPANPLUS: 0.042
-  DBD::SQLite: 0.25
   File::Find::Rule: 0.01
   Pod::POM: 0.01
   String::Approx: 0.01

@@ -6,7 +6,6 @@ my $build = Module::Build->new(
   license     => 'perl',
   requires    => {
     'CPANPLUS'    => '0.042',
-    'DBD::SQLite' => '0.25',
     'File::Find::Rule' => '0.01',
     'Pod::POM'  => '0.01',
     'String::Approx'  => '0.01',
