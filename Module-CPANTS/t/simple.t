@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 use_ok("Module::CPANTS");
 
@@ -37,4 +37,11 @@ my $testers = $data->{testers};
 is_deeply($testers, {
       'fail' => 1,
       'pass' => 5,
+});
+
+my $lines = $data->{lines};
+is_deeply($lines, {
+      'nonpod' => 170,
+      'pod' => 95,
+      'total' => 265,
 });

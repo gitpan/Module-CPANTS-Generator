@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Module-CPANTS-Generator
-version: 0.003
+version: 0.004
 license: perl
 distribution_type: module
 requires:

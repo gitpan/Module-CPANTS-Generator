@@ -4,38 +4,18 @@ use Carp;
 use File::Spec::Functions qw(catfile);
 use File::Copy;
 use File::Path;
+use Module::CPANTS::Generator;
+use base 'Module::CPANTS::Generator';
 use vars qw($VERSION);
-$VERSION = "0.002";
-
-sub new {
-  my $class = shift;
-  my $self = {};
-  bless $self, $class;
-}
-
-sub cpanplus {
-  my($self, $cpanplus) = @_;
-  if (defined $cpanplus) {
-    $self->{CPANPLUS} = $cpanplus;
-  } else {
-    return $self->{CPANPLUS};
-  }
-}
-
-sub directory {
-  my($self, $dir) = @_;
-  if (defined $dir) {
-    $self->{DIR} = $dir;
-  } else {
-    return $self->{DIR};
-  }
-}
+$VERSION = "0.003";
 
 sub unpack {
   my $self = shift;
   my $dir = $self->directory || croak("No directory specified");
   mkdir $dir;
-  chdir $dir || croak("Could not chdir into $dir");
+
+  # we only really want the two-way chdir bit, so this may be overkill
+  my $cpants = $self->grab_cpants;
 
   my $cp = $self->cpanplus || croak("No CPANPLUS object");
 
@@ -67,6 +47,7 @@ sub unpack {
     }
   }
 
+  $self->save_cpants($cpants);
   return $count;
 }
 

@@ -1,17 +1,19 @@
 #!/usr/bin/perl -w
 use strict;
+use CPANPLUS;
 use Data::Dumper;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Module::CPANTS::Generator::Files;
 use Module::CPANTS::Generator::ModuleInfo;
+use Module::CPANTS::Generator::Pod;
 use Module::CPANTS::Generator::Prereq;
 use Module::CPANTS::Generator::Testers;
 use Module::CPANTS::Generator::Unpack;
 use Storable;
 use Template;
 
-my $version = "0.005";
+my $version = "0.20030421";
 
 my $unpacked = "$FindBin::Bin/../unpacked/";
 
@@ -28,10 +30,15 @@ if (-d $unpacked) {
   $u->unpack;
 }
 
+print "* Generating POD info...\n";
+my $p = Module::CPANTS::Generator::Pod->new;
+$p->directory($unpacked);
+$p->generate;
+
 print "* Generating CPAN testers info...\n";
 my $t = Module::CPANTS::Generator::Testers->new;
 $t->directory($unpacked);
-#$t->generate;
+$t->generate;
 
 print "* Generating module info...\n";
 my $m = Module::CPANTS::Generator::ModuleInfo->new;
@@ -40,7 +47,7 @@ $m->directory($unpacked);
 $m->generate;
 
 print "* Generating module prerequisites...\n";
-my $p = Module::CPANTS::Generator::Prereq->new;
+$p = Module::CPANTS::Generator::Prereq->new;
 $p->cpanplus($cpanplus);
 $p->directory($unpacked);
 $p->generate;

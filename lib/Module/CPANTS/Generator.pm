@@ -1,9 +1,74 @@
 package Module::CPANTS::Generator;
+use Carp;
+use Cwd;
+use Storable;
 use strict;
 use vars qw($VERSION);
-$VERSION = "0.003";
+$VERSION = "0.004";
 
-# Errr, does nothing atm
+sub new {
+  my $class = shift;
+  my $self = {};
+  bless $self, $class;
+}
+
+sub cpanplus {
+  my($self, $cpanplus) = @_;
+  if (defined $cpanplus) {
+    $self->{CPANPLUS} = $cpanplus;
+  } else {
+    return $self->{CPANPLUS};
+  }
+}
+
+sub directory {
+  my($self, $dir) = @_;
+  if (defined $dir) {
+    $self->{DIR} = $dir;
+  } else {
+    return $self->{DIR};
+  }
+}
+
+sub origdir {
+  my($self, $dir) = @_;
+  if (defined $dir) {
+    $self->{OLDDIR} = $dir;
+  } else {
+    return $self->{OLDDIR};
+  }
+}
+
+# fetch the storabled thingy, and chdir to the unpacked root
+sub grab_cpants {
+  my $self = shift;
+
+  my $cpants = {};
+  eval {
+    $cpants = retrieve("cpants.store");
+  };
+  # warn $@ if $@;
+  $self->origdir(cwd);
+
+  my $dir = $self->directory || croak("No directory specified");
+  chdir $dir || croak("Could not chdir into $dir");
+
+  return $cpants;
+}
+
+# chdir back, and store cpants
+sub save_cpants {
+  my $self = shift;
+  my $cpants = shift;
+
+  chdir $self->origdir;
+  store($cpants, "cpants.store");
+}
+
+sub generate {
+  die "ruh roh - virtual method call";
+}
+
 
 1;
 

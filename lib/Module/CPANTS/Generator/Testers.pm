@@ -1,28 +1,13 @@
 package Module::CPANTS::Generator::Testers;
 use strict;
 use Carp;
-use Cwd;
 use DB_File;
 use Net::NNTP;
-use Storable;
+use Module::CPANTS::Generator;
+use base 'Module::CPANTS::Generator';
 
 use vars qw($VERSION);
-$VERSION = "0.002";
-
-sub new {
-  my $class = shift;
-  my $self = {};
-  bless $self, $class;
-}
-
-sub directory {
-  my($self, $dir) = @_;
-  if (defined $dir) {
-    $self->{DIR} = $dir;
-  } else {
-    return $self->{DIR};
-  }
-}
+$VERSION = "0.004";
 
 sub download {
   my $self = shift;
@@ -53,19 +38,14 @@ sub download {
 sub generate {
   my $self = shift;
 
-  my $cpants = {};
-  eval {
-    $cpants = retrieve("cpants.store");
-  };
-  # warn $@ if $@;
-
   $self->download unless -f "testers.db";
   tie my %testers,  'DB_File', "testers.db" || die;
 
-  my $origdir = cwd;
+  my $cpants = $self->grab_cpants;
 
-  my $dir = $self->directory || croak("No directory specified");
-  chdir $dir || croak("Could not chdir into $dir");
+  foreach my $dist (keys %$cpants) {
+    delete $cpants->{$dist}->{testers};
+  }
 
   while (my($id, $subject) = each %testers) {
     my($action, $dist, $platform) = split /\s/, $subject;
@@ -77,6 +57,7 @@ sub generate {
     $cpants->{$dist}->{testers}->{lc $action}++;
   }
 
-  chdir $origdir;
-  store($cpants, "cpants.store");
+  $self->save_cpants($cpants);
 }
+
+1;

@@ -1,54 +1,19 @@
 package Module::CPANTS::Generator::ModuleInfo;
 use strict;
 use Carp;
-use Cwd;
-use CPANPLUS;
 use File::Find::Rule;
 use Pod::POM;
-use Storable;
 use String::Approx qw(adist);
+use Module::CPANTS::Generator;
+use base 'Module::CPANTS::Generator';
 
 use vars qw($VERSION);
-$VERSION = "0.002";
-
-sub new {
-  my $class = shift;
-  my $self = {};
-  bless $self, $class;
-}
-
-sub cpanplus {
-  my($self, $cpanplus) = @_;
-  if (defined $cpanplus) {
-    $self->{CPANPLUS} = $cpanplus;
-  } else {
-    return $self->{CPANPLUS};
-  }
-}
-
-sub directory {
-  my($self, $dir) = @_;
-  if (defined $dir) {
-    $self->{DIR} = $dir;
-  } else {
-    return $self->{DIR};
-  }
-}
+$VERSION = "0.003";
 
 sub generate {
   my $self = shift;
 
-  my $cpants = {};
-  eval {
-    $cpants = retrieve("cpants.store");
-  };
-  # warn $@ if $@;
-
-  my $origdir = cwd;
-
-  my $dir = $self->directory || croak("No directory specified");
-  chdir $dir || croak("Could not chdir into $dir");
-
+  my $cpants = $self->grab_cpants;
   my $cp = $self->cpanplus || croak("No CPANPLUS object");
 
   my %seen;
@@ -71,8 +36,7 @@ sub generate {
     }
   }
 
-  chdir $origdir;
-  store($cpants, "cpants.store");
+  $self->save_cpants($cpants);
 }
 
 sub get_description {

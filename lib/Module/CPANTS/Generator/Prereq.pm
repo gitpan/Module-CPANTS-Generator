@@ -1,50 +1,16 @@
 package Module::CPANTS::Generator::Prereq;
 use strict;
 use Carp;
-use Cwd;
-use CPANPLUS;
 use File::Spec::Functions;
-use Storable;
 use vars qw($recursive $requires $VERSION);
-$VERSION = "0.003";
-
-sub new {
-  my $class = shift;
-  my $self = {};
-  bless $self, $class;
-}
-
-sub cpanplus {
-  my($self, $cpanplus) = @_;
-  if (defined $cpanplus) {
-    $self->{CPANPLUS} = $cpanplus;
-  } else {
-    return $self->{CPANPLUS};
-  }
-}
-
-sub directory {
-  my($self, $dir) = @_;
-  if (defined $dir) {
-    $self->{DIR} = $dir;
-  } else {
-    return $self->{DIR};
-  }
-}
+use Module::CPANTS::Generator;
+use base 'Module::CPANTS::Generator';
+$VERSION = "0.004";
 
 sub generate {
   my $self = shift;
 
-  my $cpants = {};
-  eval {
-    $cpants = retrieve("cpants.store");
-  };
-  # warn $@ if $@;
-  my $origdir = cwd;
-
-  my $dir = $self->directory || croak("No directory specified");
-  chdir $dir || croak("Could not chdir into $dir");
-
+  my $cpants = $self->grab_cpants;
   my $cp = $self->cpanplus || croak("No CPANPLUS object");
 
   my $count = 0;
@@ -103,9 +69,7 @@ sub generate {
     $cpants->{$k}->{requires_recursive} = $recursive_array->{$k};
   }
 
-  chdir $origdir;
-  store($cpants, "cpants.store");
-
+  $self->save_cpants($cpants);
   return $count;
 }
 

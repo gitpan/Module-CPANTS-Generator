@@ -1,5 +1,9 @@
 Revision history for Perl module Module::CPANTS::Generator.
 
+0.004 Mon Apr 21 19:25:18 BST 2003
+	- incorporated patches by Richard Clamp to refactor the code
+	  and a new metric: lines of pod vs. lines of code
+
 0.003 Sun Apr 13 15:59:42 BST 2003
 	- include CPAN testers data
 
