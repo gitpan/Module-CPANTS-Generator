@@ -1,240 +1,317 @@
 package Module::CPANTS::Generator;
+use strict;
+use warnings;
 use Carp;
 use Cwd;
 use Storable;
 use Data::Dumper;
-use base qw(Class::Accessor);
+use base qw(Class::Accessor Class::Data::Inheritable);
+
+use YAML;
+
 use File::Copy;
 use File::Path;
-use File::Spec::Functions (':ALL');
+use File::Spec::Functions qw(catdir catfile);
 use CPAN::DistnameInfo;
 use AppConfig qw(:expand :argcount);
+use FindBin;
 
-use Module::CPANTS::Metrics;
+use DateTime;
 
-use strict;
-use warnings;
+use vars qw($VERSION);
+$VERSION = "0.21";
 
-use vars qw($VERSION $run_id $kwalitee_defs);
-$VERSION = "0.011";
 
-Module::CPANTS::Generator->mk_accessors
-  (qw(conf total_kwalitee tests reporter));
+##################################################################
+# SETUP - AUTOMATIC
+##################################################################
+
+#-----------------------------------------------------------------
+# set up classdata and accessors
+#-----------------------------------------------------------------
+my $class=__PACKAGE__;
+
+foreach (qw(DBH tempdir distsdir testdir metricdir conf available_generators kwalitee_definitions cpan_backend)) {
+    $class->mk_classdata($_);
+}
+
+$class->mk_accessors
+  (qw(package dist temppath distnameinfo metricfile abort files dirs));
+
+
+#-----------------------------------------------------------------
+# parse command line options
+#-----------------------------------------------------------------
+{
+    my $config=AppConfig->new();
+    $config->define
+      (qw(quiet verbose force reload_cpan no_authors),
+       qw(limit=s),
+       'tempdir=s'=>{DEFAULT=>'temp'},
+       'distsdir=s'=>{DEFAULT=>'dists'},
+       'metricdir=s'=>{DEFAULT=>'metrics'},
+       'cpan=s'=>{DEFAULT=>'/home/cpan/'},
+
+       #   'tests=s@'=>{DEFAULT=>['Init']},
+      );
+    $config->args;
+    $class->conf($config);
+}
+
+##################################################################
+# SETUP - HAS TO BE CALLED EXPLICTLY
+##################################################################
+
+#-----------------------------------------------------------------
+# set up various directories
+#-----------------------------------------------------------------
+sub setup_dirs {
+    my $base=$FindBin::Bin;
+
+    $class->distsdir(catdir($base,$class->conf->distsdir));
+    croak("I cannot do my work without a distsdir") unless (-e $class->distsdir);
+
+    $class->metricdir(catdir($base,$class->conf->metricdir));
+    if (!-e $class->metricdir) {
+	mkdir($class->metricdir) || croak "cannot make metricdir: ".$class->metricdir.": $!";
+    }
+
+    $class->tempdir(catdir($base,$class->conf->tempdir));
+    if (!-e $class->tempdir) {
+	mkdir($class->tempdir) || croak "cannot make tempdir: ".$class->tempdir.": $!";
+    }
+}
+
+
+#-----------------------------------------------------------------
+# cpanplus
+#-----------------------------------------------------------------
+sub get_cpan_backend {
+    my $self=shift;
+
+    if ($self->cpan_backend) {
+	return $self->cpan_backend;
+    }
+
+    my $cp=CPANPLUS::Backend->new(conf => {verbose => 0, debug => 0});
+    $self->cpan_backend($cp);
+
+    # set local cpan mirror if there is one - RECOMMENDED
+    if (my $local_cpan=$self->conf->cpan) {
+	my $cp_conf=$cp->configure_object;
+	$cp_conf->_set_ftp(urilist=>
+			   [{
+			     scheme => 'file',
+			     path   => $local_cpan,
+			    }]);
+    }
+    return $cp;
+}
+
+
+
+##################################################################
+# Instance Methods
+##################################################################
 
 sub new {
     my $class=shift;
-    my $opts=shift;
+    my $package=shift;
+    my $temppath=catfile($class->tempdir,$package);
 
-    my $self=bless {},$class;
+    my $self=bless {
+		    package=>$package,
+		    temppath=>$temppath,
+		   },$class;
 
-    my $config=AppConfig->new();
-    $config->define
-      (qw(quiet verbose force reload_cpan),
-       qw(cpan=s limit=s),
-       'temp_dir=s'=>{DEFAULT=>catdir($FindBin::Bin,'temp')},
-       'unpack_dir=s'=>{DEFAULT=>catdir($FindBin::Bin,'unpacked')},
-       qw(reporter=s@ dbi_connect=s@),
-       'tests=s@'=>{DEFAULT=>['Init']},
-      );
+    my $di=CPAN::DistnameInfo->new($package);
+    $self->distnameinfo($di);
+    $self->dist($di->distvname || $package);
 
-    $config->file("$FindBin::Bin/.cpants");
-    $config->args;
+    $self->metricfile(catfile($class->metricdir,$self->dist.'.yml'));
 
-    $self->conf($config);
-
-    # load tests & reporter
-    $self->load_tests;
-    $self->load_reporter;
+    $self->{metric}{dist}=$self->dist;
 
     return $self;
 }
 
 
-sub load_tests {
-    my $self=shift;
-    my $tests=$self->conf->tests;
-    my $total_kwalitee;
-    print "Loading Test Modules\n" if $self->conf->verbose;
-
-    no strict 'refs';
-
-    foreach my $test (@$tests) {
-	$test="Module::CPANTS::Generator::$test";
-	eval "require $test";
-	croak "cannot load $test: $@\n" if $@;
-	print "+ loaded $test\n" if $self->conf->verbose;
-
-	my $local_k_def=$test."::kwalitee";
-	while(my($def,$info)=each %$local_k_def) {
-	    croak "duplicate test definition: $def in $test\n" if $kwalitee_defs->{$def};
-	    my $lk=(defined $info->[2]?$info->[2]:1);
-	    $kwalitee_defs->{$def}=
-	      {
-	       short=>$info->[0],
-	       long=>$info->[1] || "no long descriptio, here is the short one: ".$info->[0],
-	       k=>$lk,
-	       class=>$test,
-	      };
-	    $total_kwalitee+=$lk;
-	}
+#-----------------------------------------------------------------
+# write_metric
+#-----------------------------------------------------------------
+sub write_metric {
+    my $proto=shift;
+    my ($metric,$file);
+    if (ref($proto)) {
+	$file=$proto->metricfile;
+	$metric=$proto->{metric};
+    } else {
+	$metric=shift;
+	$file=catfile($proto->metricdir, $metric->{dist}.'.yml');
     }
-    $self->total_kwalitee($total_kwalitee);
-    print "Total Kwalitee available: $total_kwalitee\n" if $self->conf->verbose;
 
-    $self->tests($tests);
+    $metric->{generated_at}=DateTime->now->datetime;
+    $metric->{generated_with}="Module::CPANTS::Generator ".$VERSION;
+
+    open(OUT,">$file") || croak("Cannot write metrics to $file: $!");
+    print OUT Dump($metric);
+    close OUT;
+}
+
+
+
+##################################################################
+# Class Methods
+##################################################################
+
+sub tidytemp {
+    my $self=shift;
+    rmtree($self->tempdir) || die "ERROR $!";
+    mkdir($class->tempdir) || die "ERROR $!";
     return;
 }
 
 
 
-sub load_reporter {
+sub load_generators {
     my $self=shift;
-    my $reporter=$self->conf->reporter;
-    print "Loading Reporter Modules\n" if $self->conf->verbose;
+    my $generators=shift;
 
-    foreach my $rep (@$reporter) {
-	$rep="Module::CPANTS::Reporter::$rep";
-	eval "require $rep";
-	croak "cannot load $rep: $@\n" if $@;
-	$rep->init($self);
-	print "+ loaded $rep\n" if $self->conf->verbose;
+#    print "Loading Generators.\n" unless $self->conf->quiet;
+
+    {
+	no strict 'refs';
+	foreach my $gen (@$generators) {
+	    $gen="Module::CPANTS::Generator::$gen";
+	    eval "require $gen";
+	    croak "cannot load $gen\n$@" if $@;
+	    print "+ loaded $gen\n" if $self->conf->verbose;
+	}
     }
-    $self->reporter($reporter);
+
+    $self->available_generators($generators);
     return;
 }
 
-sub unpack {
-    my $self=shift;
-    my $path=shift;   # path ist absolut (weil CPANPLUS ->fetched) !! SHIT!
-    my $temp_dir=$self->conf->temp_dir;
-    my $unpack_dir=$self->conf->unpack_dir;
 
-    my $metric=Module::CPANTS::Metrics->new($self);
-
-    if (!-e $temp_dir) {
-	mkdir($temp_dir) || die "ERROR $!";
-    }
-    chdir($temp_dir);
-
-    my $di=CPAN::DistnameInfo->new($path);
-    $metric->distnameinfo($di);
-    $metric->dist($di->distvname || $path);
-
-    my $size_packed=-s $path;
-
-    # extract
-#    my $ext=$di->archive_extn;
-    my $ext=$di->extension || '';
-    if ($ext eq 'tar.gz' || $ext eq 'tgz') {
-	system("tar", "xzf", $path);
-    } elsif ($ext eq 'zip') {
-	system("unzip", "-q", $path);
-    } else {
-	$metric->add(
-		     package=>$di->filename,
-		     kwalitee=>0,
-		     kwalitee_abs=>"0/".$self->total_kwalitee,
-		    );
-	$metric->add_flaw('unknown_package_type');
-	$metric->error(1);#"unknown package format: ",$di->filename,", skipping test of package\n");
-	return $metric;
-    }
-
-    # check if package is polite
-    opendir(DIR,".");
-    my @stuff=grep {/\w/} readdir(DIR);
-    closedir DIR;
-
-    my $target;
-    my $extracts_nicely=0;
-    if (@stuff == 1) {
-	# tempdir containts one thing, so move it
-	$extracts_nicely=1;
-	$target=catdir($unpack_dir,$stuff[0]);
-	if (-e $target) {
-	    # hmm, extraction happend allready, we're skipping moving
-	    # but skipping extraction might be a better idea...
-#	    print "\tpackage allready unpacked, skipping extraction\n";
-	    rmtree $stuff[0] || die "ERROR $!";
-	} else {
-	    move($stuff[0],$target) || die "ERROR $!";
-	}
-
-    } else {
-	# not a proper tarball...
-#	$metric->add_flaw('unknown_package_type');
-#	print "\tnot a proper tarball\n";
-	my $fakedir=$di->distvname;
- 	$target=catdir($unpack_dir,$fakedir);
-	if (-e $target) {
-#	    print "\tpackage allready unpacked, skipping extration\n";
-	    rmtree $temp_dir || die "ERROR $!";
-	} else {
-	    mkdir($target) || die "ERROR $!";
-#	    print "\tmove to $target\n";
-	    move($temp_dir,$target) || die "ERROR $!";
+sub kwalitee_indicators {
+    my $class=shift;
+    my @kwalitee_indicators;
+    foreach my $generator (@{$class->available_generators}) {
+	next unless $generator->kwalitee_definitions;
+	foreach my $kw (@{$generator->kwalitee_definitions}) {
+	    $kw->{defined_in}=$generator;
+	    push(@kwalitee_indicators,$kw);
 	}
     }
+    return \@kwalitee_indicators;
+}
 
-    my ($major,$minor);
-    if ($di->version) {
-	($major,$minor)=$di->version=~/^(\d+)\.(.*)/;
+
+sub determine_kwalitee {
+    my $class=shift;
+    my $type=shift;
+    my $metric=shift;
+#    print $metric->{dist}."\n" unless $class->conf->quiet;
+
+    my $indicators=$class->kwalitee_indicators;
+
+    foreach my $ind (@$indicators) {
+	next unless $ind->{type} eq $type;
+	my $code=$ind->{code};
+	my $name=$ind->{name};
+	my $rv=&$code($metric);
+
+	if ($rv == -1) {
+	    $metric->{kwalitee}={kwalitee=>0};
+	    foreach (@$indicators) {
+		$metric->{kwalitee}{$name}=0;
+	    }
+	    last;
+	} elsif ($rv) {
+	    $metric->{kwalitee}{$name}=1;
+
+	    next if $rv<1;
+	    $metric->{kwalitee}{kwalitee}+=1;
+
+	} else {
+	    print "+ failed $name\n" if $class->conf->verbose;
+	    $metric->{kwalitee}{$name}=0;
+	}
     }
-    $major||=$di->dist;
-
-    $metric->unpacked($target);
-    $metric->add
-      (
-       package=>$di->filename,
-       extension=>$ext,
-       version=>$di->version,
-       version_major=>$major,
-       version_minor=>$minor,
-       files=>{extracts_nicely=>$extracts_nicely},
-       size=>{packed=>$size_packed},
-      );
-    return $metric;
+    print "+ Kwalitee: ".$metric->{kwalitee}{kwalitee}."\n" if $class->conf->verbose;
+    return;
 }
 
 
-sub unpack_cpanplus {
-    my $self=shift;
-    my $module=shift;
 
-    my $temp_dir=$self->conf->temp_dir;
-    my $unpack_dir=$self->conf->unpack_dir;
+sub yaml2db {
+    my $class=shift;
+    my $metric=shift;
+    my $DBH=$class->DBH;
+    my $dist=$metric->{dist};
+    delete $metric->{dist};
 
-    # fetch
-    my $f=$module->fetch;
+    while (my ($k,$v)=each %$metric) {
+	my $ref=ref($v);
+	if (!$ref || $ref eq 'STRING') {
+#	    $v=$$v if ref eq 'STRING';
+#	    print "There shouldn't be any strings in a metrics hash for: dist $dist key: $k value: $v\n";
 
-    my $metric=$self->unpack($f);
-    $metric->add(cpan_author=>$module->author);
-    return $metric;
+	    # no-op
+
+	} elsif ($ref eq 'ARRAY') {
+	    foreach my $row (@$v) {
+		my @columns=('dist');
+		my @data=($dist);
+		foreach my $sk (keys %$row) {
+		    push(@columns,$sk);
+		    my $sval=$row->{$sk};
+		    if (defined($sval)) {
+			if ($sval =~ /\0/) {  # Binary Null in prereq of  Astro::Aladin not handled by SQLite
+			    $sval=undef;
+			}
+		    }
+		    $sval=join(',',@$sval) if (ref($sval) eq 'ARRAY');
+		    push(@data,$sval);
+		}
+		$DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{'?'}@data).")",undef,@data);
+	    }
+
+	} elsif ($ref eq 'HASH') {
+	    my @columns=('dist');
+	    my @data=($dist);
+	    foreach my $sk (keys %$v) {
+		push(@columns,$sk);
+		my $val=$v->{$sk};
+		$val=join(',',@$val) if (ref($val) eq 'ARRAY');
+		push(@data,$val);
+	    }
+	    $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{'?'}@data).")",undef,@data);
+	}
+    }
+    return;
 }
 
 
-sub run_id {
-    return $run_id if $run_id;
+sub create_kwalitee_table {
+    my $class=shift;
 
-    my ($d,$m,$y)=(localtime)[3,4,5];
-    $run_id=sprintf("%04d%02d%02d",$y+1900,$m+1,$d);
-    return $run_id;
+    my @sql_kw="
+create table kwalitee (
+   dist varchar(150),
+   kwalitee int default 0";
+
+    foreach my $kw (@{$class->kwalitee_indicators}) {
+	push(@sql_kw,"   ".$kw->{name}." int default 0");
+    }
+    return (join(",\n",@sql_kw)."\n)");
 }
 
-sub kwalitee_defs {
-    return $kwalitee_defs;
-}
-
-sub create_db {
-    croak("Method 'create_db' must be implemented in subclass");
-}
-
-sub generate {
-    croak("Method 'generate' must be implemented in subclass");
-}
 
 
 1;
+
 __END__
 
 =pod
@@ -245,309 +322,71 @@ Module::CPANTS::Generator - Generate CPANTS statistics
 
 =head1 SYNOPSIS
 
-  my $cpants=Module::CPANTS::Generator->new;
-  
-  my $metric=$cpants->unpack($path_to_package);
-  
-  foreach my $testclass (@test_classes) {
-      print "\trunning $testclass\n";
-      $testclass->generate($metric);
-  }
-  
-  $metric->report;
-
-Or see examples/*.pl for some scripts
+See cpants/*.pl for some scripts
 
 =head1 DESCRIPTION
 
 C<Module::CPANTS::Generator> is BETA code, so things might change
 in future releases.
 
-Please note that CPAN::DistnameInfo Version 0.04 is needed, which is not
-released yet. You can get it from here:
-http://svn.mutatus.co.uk/browse/CPAN-DistnameInfo/trunk/
+more docs to follow.
 
-CPANTS consists of three basic classes, some of which require
-subclassing to work. There is one main object, $cpants (provided by
-Module::CPANTS::Generator), and one object for each distribution that
-is tested called $metric (provided by
-Module::CPANTS::Metrics). Module::CPANTS::Reporter does not create
-objects but uses class methods.
-
-First, a Module:CPANTS:Generator object is created, called C<$cpants>
-It contains a configuration object (AppConfig) and is responsible for
-loading testing and reporting modules. It might use a
-CPANPLUS::Backend to connect to CPAN.
-
-Each testing module (which must be a subclass of
-Module:CPANTS:Generator) contains information on the tests it is going
-to run. From this information, $cpants calculates the total kwalitee
-available and generates some metadata (which test are there, what
-exaclty do they test).
-
-While testing each distribution, a Metrics Object for this
-distribution is created. This object contains information on the
-distribution (name, unpacked location, etc), a link to the C<$cpants>
-object (to access config values etc) and a data structure of the test
-results.
-
-During and after testing, all loaded reporter modules (subclasses of
-L<M:C:Reporter>) are called.
-
-
-=head1 CONFIGURATION
-
-Module:CPANTS:Generator uses AppConfig for reading command line
-options and config files.
-
-From the commandline, use
-
-  -option value
-
-In a config file, use
-
-  option = value
-
-See L<AppConfig> for detailed information.
-
-Here is a list of options:
-
-Please note that all CPAN-releated config values are only needed if
-you want to test distributions on CPAN and thus are not needed in
-"lint"-mode.
-
-=head2 Boolean values
-
-=head3 verbose
-
-Print some informational output to STDOUT
-
-Default: undef
-
-=head3 force
-
-Force testing of all distributions reported by CPANPLUS (instead of
-only testing previously untested distributions)
-
-Default: undef
-
-=head3 reload_cpan
-
-Call C<reload_indices> on the CPANPLUS::Backend object. This will
-establish a connection to your CPAN mirror and fetch a new filelist.
-
-Default: undef
-
-=head2 String values
-
-=head3 temp_dir
-
-Path to a temp directory. This shouldn't be /tmp, but a custom temp
-directory only used by CPANTS (as it might be deleted)
-
-Default: catdir($FindBin::Bin,'temp')
-
-=head3 unpack_dir
-
-Path to a directory where all unpacked distributions will be
-stored. This should be on a big enough disk to handle about 3 Gigs.
-
-Default: catdir($FindBin::Bin,'unpacked')
-
-=head3 cpan
-
-Path to a local CPAN mirror. I hope nobody is crazy enough to use
-CPANTS over the network.
-
-Default: undef
-
-=head3 limit
-
-Maximum number of distributions to test. Mainly usefull when
-developing new tests to limit running time.
-
-Default: undef
-
-=head2 List values
-
-=head3 reporter
-
-A list of L<Module::CPANTS::Reporter> subclasses. Do not include
-"Module::CPANTS::Reporter" here, it will be appended when the reporter
-modules are loaded.
-
-You should add at least one Reporter module, or else you'll spend some
-CPU cycles for nothing...
-
-Default: undef
-
-=head3 tests
-
-A list of L<Module::CPANTS::Generator> subclasses. Do not include
-"Module::CPANTS::Generator" here, it will be appended when the test
-modules are loaded.
-
-Add or remove tests as you wish, but keep the C<Init>-test active, or
-else strange things might happen.
-
-It's very handy to only load those testing modules you're currently
-developing.
-
-Default: ['Init']
-
-=head3 dbi_connect
-
-DBI connect information (data source, username, password). This array
-will be passed as-is to L<DBI>s C<connect> method.
-
-Default: undef
-
-=head1 METHODS
-
-=head2 Main Methods
-
-=head3 new
-
-Initiate a new cpants object. Configuration is set up using AppConfig.
-
-C<new> calls L<load_tests> and L<load_reporter> after setting up the
-object.
-
-=head3 load_tests
-
-Load testing modules. Called by L<new>, so do not call it directly.
-
-The config value L<reporter> contains a list of testing module
-names. 'Module::CPANTS::Generator::' will be prepended to each module
-name. (eg. 'Files' is changed to 'Module::CPANTS::Generator::Files'
-
-Each module is loaded. Each's module package global hash C<%kwalitee>
-is used to generate the global kwalitee definitions and to calculate the
-total kwalitee available.
-
-=head3 load_reporter
-
-Load reporter modules. Called by L<new>, so do not call it directly.
-
-The config value L<reporter> contains a list of reporter module
-names. 'Module::CPANTS::Reporter::' will be prepended to each module
-name. (eg. 'DB' is changed to 'Module::CPANTS::Reporter::DB'
-
-Each module is loaded and the class method C<init> called.
-
-=head3 unpack
-
-  my $metric=$cpants->unpack($path_to_package);
-
-Unpack does quite a lot:
+To generate CPANTS data, run the scripts in the F<cpants> dir included
+in the distribution in the following order:
 
 =over
 
-=item *
+=item 1.
 
-initiate a new L<Module::CPANTS::Metrics> object for the to be tested
-package.
+fetch_cpan.pl
 
-=item *
+=item 2.
 
-initate a new CPAN::DistnameInfo object from the package filename.
+analyse_dists.pl
 
-=item *
+=item 3.
 
-extract the package
+calc_basic_kwalitee.pl
 
-=item *
+=item 4.
 
-check if the package extracts nicely
+yaml2sqlite.pl
 
-=item *
+=item 5.
 
-move the extracted package to L<unpack_dir>
-
-=item *
-
-add some first information (size_packed, extracts_nicely, data
-provided by CPAN::DistnameInfo) to the metrics object
+calc_complex_kwalitee.pl
 
 =back
-
-Returns a L<Module::CPANTS::Metrics> object.
-
-=head3 unpack_cpanplus
-
-  my $metric=$cpants->unpack_cpanplus($module_object);
-
-Wrapper around L<unpack>.
-
-C<$module_object> must be a CPANPLUS module object.
-
-C<unpack_cpanplus> will use CPANPLUS::Backend to fetch the package
-from CPAN (hopefully from a local mirror) and call L<unpack> on it.
-
-Additionally, $metric->cpan_author will be set to the value of
-$module_object->author.
-
-=head2 Virtual Methods
-
-These Methods must be implemented in subclasse of
-C<Module::CPANTS::Generator>
-
-=head3 generate
-
-This method does the actual testing and generating of data. See
-L<Module::CPANTS::Generator::Init> and
-L<Module::CPANTS::Generator::Files> for more info / examples.
-
-=head3 create_db
-
-Return a ARRAYREF containing SQL-statments to create tables that can
-store all information generated by the module.
-
-=head2 Accessor Methods provided by Class::Accessor
-
-=head3 conf
-
-Return the AppConfig object.
-
-You can do $cpants->conf->config_key to access config values directly.
-
-=head3 total_kwalitee
-
-return total wwalitee.
-
-=head3 tests
-
-Return arrayref of loaded test modules (Subclasses of
-Module::CPANTS::Generator). This are the fully qualified namespaces,
-i.e. C<Module::CPANTS::Generator::Prereq>
-
-=head3 reporter
-
-Return arrayref of loaded reporter modules (Subclasses of
-Module::CPANTS::Reporter). This are the fully qualified namespaces,
-i.e. C<Module::CPANTS::Reporter::DB>)
-
 
 =head1 CPANTS
 
 The CPAN Testing Service.
 
-See http://www.pobox.com/~schwern/talks/CPANTS/full_slides/
-and http://domm.zsi.at/talks/vienna_pm200309/ for more info.
+CPANTS Results can be viewed here:
 
-=head1 SEE ALSO
+http://cpants.dev.zsi.at/
 
-Module::CPANTS::Metrics
-
-Module::CPANTS::Reporter
-
-=head1 TODO
+Here are various sources for more information:
 
 =over
 
-=item * More Tests
+=item *
 
-=item * Better Tests
+Slides of Schwern's talk at YAPC::Europe::2001
+
+http://www.pobox.com/~schwern/talks/CPANTS/full_slides/
+
+=item *
+
+Slides of my talk given at a Vienna.pm Techmeet in September 2003
+
+http://domm.zsi.at/talks/vienna_pm200309/
+
+=item *
+
+Paper for the Proceedings of YAPC::Europe::2003
+
+http://cpants.dev.zsi.at/cpants_paper.html
 
 =back
 
@@ -563,7 +402,7 @@ proposed by Michael G. Schwern <schwern@pobox.com>
 
 =head1 LICENSE
 
-Module::CPANTS::Generator is Copyright (c) 2003 Thomas Klausner, ZSI.
+Module::CPANTS::Generator is Copyright (c) 2003,2004 Thomas Klausner, ZSI.
 All rights reserved.
 
 You may use and distribute this module according to the same terms

@@ -1,0 +1,9 @@
+Part of CPANTS / Module::CPANTS::Generator
+
+This directory contains all CPAN distributions in archived form that
+CPANTS should test.
+
+Use cpants/fetch_cpan.pl to download all distributions from CPAN into
+this directory.
+
+Thomas Klausner, domm@zsi.at, 2004-08-22

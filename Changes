@@ -1,4 +1,45 @@
-Revision history for Perl module Module::CPANTS::Generator.
+#-----------------------------------------------------------------
+# Changes for Module::CPANTS::Generator
+# $Rev: 59 $
+# $Date: 2004-08-22 22:06:03 +0200 (Sun, 22 Aug 2004) $ 
+#-----------------------------------------------------------------
+
+2004-08-22
+
+	** released as Module-CPANTS-Generator-0.21
+	- moved generation of authors statistic from yaml2sqlite
+	  into script make_authors.pl
+	- added average_kwalitee and distcount to authors table
+	- added progress bars (courtesy of Term::ProgressBar)
+
+	** released as Module-CPANTS-Generator-0.20
+	- added (very basic) docs
+	- improved tests (ha!)
+	- polished up MANIFEST, Build.PL etc
+	- use Module::MakefilePL::Parse (by Robert Rothenberg) in
+          MCG::Prereq to parse Makefile.PL
+	- lists in YAML metric files are now proper YAML lists instead
+	  of a string with comma-seperated values. Thanks to nkuitse
+          for the suggestion:
+          http://use.perl.org/comments.pl?sid=21487&cid=32774
+
+
+2004-08-20
+	- added MCG::CPAN to collect infos available via CPANPLUS
+	  backend (eg author)
+	- modified Generator.pm a bit for better handling of
+	  CPANPLUS backends
+
+
+2004-08-14
+	- rename old SQLite DB to cpants_YYYY-MM-DD.db
+	- $metric: generated with CPANTS-version
+	- $metric: generated at DateTime
+	- updated Changes and TODO
+
+2004-08-13
+	- again, rewritten a lot!
+	- this will be version 0.20
 
 
 0.011 2003-12-08

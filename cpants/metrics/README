@@ -1,0 +1,6 @@
+Part of CPANTS / Module::CPANTS::Generator
+
+This directory contains metric files in YAML for each distribution tested by
+CPANTS.
+
+Thomas Klausner, domm@zsi.at, 2004-08-22

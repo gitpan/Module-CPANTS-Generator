@@ -1,54 +1,45 @@
 --- #YAML:1.0
 name: Module-CPANTS-Generator
-version: 0.011
+version: 0.21
+author:
+  - Thomas Klausner <domm@zsi.at> http://domm.zsi.at
+abstract: Generate CPANTS statistics
 license: perl
-distribution_type: module
 requires:
-  AppConfig: 0
-  CPAN::DistnameInfo: 0.04
-  CPANPLUS: 0.042
+  AppConfig: 1.56
+  CPAN::DistnameInfo: 0.05
+  CPANPLUS: 0.049
+  Class::Accessor: 0.19
+  Class::Data::Inheritable: 0.02
+  DBD::SQLite: 0.31
+  DBI: 1.42
+  DateTime: 0.21
+  Module::MakefilePL::Parse: 0.11
+  Pod::Simple::Checker: 2.02
+  Storable: 2.09
+  Term::ProgressBar: 1.18
   Test::More: 0.01
-recommends: {}
-build_requires: {}
-conflicts: {}
+  YAML: 0.35
 provides:
   Module::CPANTS::Generator:
     file: lib/Module/CPANTS/Generator.pm
-    version: 0.011
+    version: 0.21
+  Module::CPANTS::Generator::CPAN:
+    file: lib/Module/CPANTS/Generator/CPAN.pm
+    version: 0.21
   Module::CPANTS::Generator::Files:
     file: lib/Module/CPANTS/Generator/Files.pm
-    version: 0.011
-  Module::CPANTS::Generator::Init:
-    file: lib/Module/CPANTS/Generator/Init.pm
-    version: 0.011
+    version: 0.21
+  Module::CPANTS::Generator::Pod:
+    file: lib/Module/CPANTS/Generator/Pod.pm
+    version: 0.21
   Module::CPANTS::Generator::Prereq:
     file: lib/Module/CPANTS/Generator/Prereq.pm
-    version: 0.011
-  Module::CPANTS::Metrics:
-    file: lib/Module/CPANTS/Metrics.pm
-    version: 0.011
-  Module::CPANTS::Reporter:
-    file: lib/Module/CPANTS/Reporter.pm
-    version: 0.011
-  Module::CPANTS::Reporter::DB:
-    file: lib/Module/CPANTS/Reporter/DB.pm
-    version: 0.011
-  Module::CPANTS::Reporter::DataDumper:
-    file: lib/Module/CPANTS/Reporter/DataDumper.pm
-    version: 0.011
-  Module::CPANTS::Reporter::STDOUT:
-    file: lib/Module/CPANTS/Reporter/STDOUT.pm
-    version: 0.011
-  Module::CPANTS::Reporter::asHash:
-    file: lib/Module/CPANTS/Reporter/asHash.pm
-    version: 0.011
-  Module::CPANTS::Reporter::asSQLite:
-    file: lib/Module/CPANTS/Reporter/asSQLite.pm
-    version: 0.011
-  Module::CPANTS::asHash:
-    file: lib/Module/CPANTS/Reporter/asHash.pm
-    version: 0.011
+    version: 0.21
+  Module::CPANTS::Generator::Unpack:
+    file: lib/Module/CPANTS/Generator/Unpack.pm
+    version: 0.21
   varchar:
-    file: lib/Module/CPANTS/Generator/Init.pm
-    version: 0.011
-generated_by: Module::Build version 0.21
+    file: lib/Module/CPANTS/Generator/Unpack.pm
+    version: 0.21
+generated_by: Module::Build version 0.24
