@@ -5,7 +5,7 @@ use File::Spec::Functions;
 use vars qw($recursive $requires $VERSION);
 use Module::CPANTS::Generator;
 use base 'Module::CPANTS::Generator';
-$VERSION = "0.004";
+$VERSION = "0.005";
 
 sub generate {
   my $self = shift;
@@ -64,9 +64,9 @@ sub generate {
   my $recursive_array = $self->fold($recursive);
 
   foreach my $k (keys %$requires) {
-    $cpants->{$k}->{requires_module} = $requires_module->{$k};
-    $cpants->{$k}->{requires} = $requires_array->{$k};
-    $cpants->{$k}->{requires_recursive} = $recursive_array->{$k};
+    $cpants->{cpants}->{$k}->{requires_module} = $requires_module->{$k};
+    $cpants->{cpants}->{$k}->{requires} = $requires_array->{$k};
+    $cpants->{cpants}->{$k}->{requires_recursive} = $recursive_array->{$k};
   }
 
   $self->save_cpants($cpants);

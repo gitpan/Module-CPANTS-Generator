@@ -3,13 +3,13 @@ NAME
 
 SYNOPSIS
       use Module::CPANTS;
-      my $c = Module::CPANTS;
+      my $c = Module::CPANTS->new();
       my $cpants = $c->data;
 
 DESCRIPTION
-    This is an initial stab at providing automated testing for the modules
-    on CPAN. Alpha release and all that. It's just out there to test the
-    waters.
+    This is an initial stab at providing automated testing metrics for the
+    modules on CPAN. Alpha release and all that. It's just out there to test
+    the waters.
 
     CPANTS was initially described by Michael Schwern a long time ago in:
     http://archive.develooper.com/perl-qa@perl.org/msg00148.html It is
@@ -38,9 +38,11 @@ DESCRIPTION
         'lines' => {
           'nonpod' => 170,
           'pod' => 95,
+          'pod_errors' => 0,
           'total' => 265,
-          'with_comments' => 8
+          'with_comments' => 8,
         },
+        'releases' => '5',
         'requires' => [
           'Graphics-ColorNames-0.32.tar.gz',
           'Scalar-List-Utils-1.11.tar.gz',
@@ -55,13 +57,23 @@ DESCRIPTION
           'File-Spec-0.82.tar.gz',
           'Graphics-ColorNames-0.32.tar.gz',
           'Scalar-List-Utils-1.11.tar.gz',
-          'Test-Harness-2.26.tar.gz',
+          'Test-Harness-2.28.tar.gz',
           'Test-Simple-0.47.tar.gz'
         ],
+        'size' => {
+          'packed' => 3883,
+          'unpacked' => 13078
+        },
         'testers' => {
           'fail' => 1,
-          'pass' => 5,
+          'pass' => 5
         },
+        'uses' => [
+          'Graphics::ColorNames',
+          'List::Util',
+          'strict',
+          'vars'
+        ]
       }
 
     The "author" field is the PAUSE ID of the author of the distribution.
@@ -69,13 +81,17 @@ DESCRIPTION
     The "description" field is the description listed in the CPAN modules
     list for the distribibution.
 
-    The "lines" field shows the number of pod lines (documentation), non-pod
-    lines (code), lines with comments, and total lines in all the modules in
-    a distribution.
+    The "lines" field shows the number of POD lines (documentation), number
+    of POD errors reported by Pod::Simple::Checker, non-POD lines (code),
+    lines with comments, and total lines in all the modules in a
+    distribution.
 
     The "files" field is a listref containing interesting files which were
     found. The following files are deemed interesting at the moment:
     Makefile.PL, README, Build.PL, META.yml, SIGNATURE, MANIFEST.
+
+    The "releases" field contains the total number of releases to CPAN that
+    distribution has.
 
     The "requires_module" field is a hashref containing the module
     prerequisites listed in the Makefile.PL for the distribution.
@@ -88,10 +104,15 @@ DESCRIPTION
     recursive dependencies. This should be all the distributions that the
     distribution needs to run.
 
-    The "testers" field contains the number of passes and fails reported by
-    the CPAN testers (http://testers.cpan.org/).
+    The "size" contains two fields: the packed and unpacked size of the
+    distribution in bytes.
 
-    More data is to be added soon. A metric may be added soon.
+    The "testers" field contains the number of passes and fails reported by
+    the CPAN testers (http://testers.cpan.org/). The "tests" subfield
+    returns the number of tests in that distribution (this is only available
+    for a limited number of distributions at the moment).
+
+    More data is to be added soon. A kwalitee rating may be added soon.
 
     Note that CPANPLUS is very useful for relating modules to distributions.
 

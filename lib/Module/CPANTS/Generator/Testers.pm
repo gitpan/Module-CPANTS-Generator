@@ -1,60 +1,59 @@
 package Module::CPANTS::Generator::Testers;
 use strict;
 use Carp;
-use DB_File;
+use DBI;
+use Clone qw(clone);
+use File::stat;
+use LWP::Simple;
 use Net::NNTP;
 use Module::CPANTS::Generator;
 use base 'Module::CPANTS::Generator';
 
 use vars qw($VERSION);
-$VERSION = "0.004";
+$VERSION = "0.006";
 
 sub download {
   my $self = shift;
 
-  my $t = tie my %testers,  'DB_File', "testers.db";
-
-  my $nntp = Net::NNTP->new("nntp.perl.org") || die;
-  my($num, $first, $last) = $nntp->group("perl.cpan.testers");
-
-  warn "$num: $first-$last\n";
-
-  my $step = 100;
-
-  while (1) {
-    last if $first > $last;
-    my $next = $first + $step;
-    my $h = $nntp->xhdr("subject", "$first-$next");
-    foreach my $id (sort keys %$h) {
-      my $subject = $h->{$id};
-      $testers{$id} = $subject;
-      print "$id: $subject\n";
-    }
-    $t->sync;
-    $first += $step;
-  }
+  my $url = "http://testers.astray.com/testers.db";
+  mirror($url, "../testers.db");
 }
 
 sub generate {
   my $self = shift;
-
-  $self->download unless -f "testers.db";
-  tie my %testers,  'DB_File', "testers.db" || die;
+  my $stat = stat("testers.db");
 
   my $cpants = $self->grab_cpants;
 
-  foreach my $dist (keys %$cpants) {
-    delete $cpants->{$dist}->{testers};
+  if ($stat && time - $stat->mtime < 60*60*24) {
+    print "  all testers cached, copying\n";
+    foreach my $dist (keys %$cpants) {
+      next unless exists  $cpants->{$dist}->{testers}; 
+      next unless -d $dist;
+      $cpants->{cpants}->{$dist}->{testers} = 
+	clone($cpants->{$dist}->{testers});
+    }
+    $self->save_cpants($cpants);
+    return;
   }
 
-  while (my($id, $subject) = each %testers) {
-    my($action, $dist, $platform) = split /\s/, $subject;
-    next unless $action =~ /PASS|FAIL/;
+  $self->download;
 
-    my @files = glob($dist . "*");
-    next unless @files == 1;
-    $dist = $files[0];
-    $cpants->{$dist}->{testers}->{lc $action}++;
+  my $dbh = DBI->connect("dbi:SQLite:dbname=../testers.db","","", { RaiseError => 1});
+
+  foreach my $dist (keys %$cpants) {
+    delete $cpants->{$dist}->{testers}->{pass};
+    delete $cpants->{$dist}->{testers}->{fail};
+  }
+
+  my $action_sth = $dbh->prepare("SELECT id, action, version, distversion, platform FROM reports");
+  $action_sth->execute();
+  my($id, $action, $version, $distversion, $platform);
+  $action_sth->bind_columns(\$id, \$action, \$version, \$distversion, \$platform);
+  while ($action_sth->fetch) {
+    next unless $version;
+    next unless exists $cpants->{cpants}->{$distversion};
+    $cpants->{cpants}->{$distversion}->{testers}->{lc $action}++;
   }
 
   $self->save_cpants($cpants);

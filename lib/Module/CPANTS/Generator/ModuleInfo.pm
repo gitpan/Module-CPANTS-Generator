@@ -1,14 +1,15 @@
 package Module::CPANTS::Generator::ModuleInfo;
 use strict;
 use Carp;
+use Clone qw(clone);
 use File::Find::Rule;
 use Pod::POM;
-use String::Approx qw(adist);
 use Module::CPANTS::Generator;
+use String::Approx qw(adist);
 use base 'Module::CPANTS::Generator';
 
 use vars qw($VERSION);
-$VERSION = "0.003";
+$VERSION = "0.005";
 
 sub generate {
   my $self = shift;
@@ -22,18 +23,24 @@ sub generate {
   foreach my $module (values %{$cp->module_tree}) {
     my $package = $module->package;
     next unless $package;
+    next unless -d $package;
     next if $seen{$package}++;
+
+    # copy over the size
+    $cpants->{cpants}->{$package}->{size} = clone($cpants->{$package}->{size});
 
     if (not exists $cpants->{$package}->{author}) {
       my $author = $module->author;
       $cpants->{$package}->{author} = $author;
     }
+    $cpants->{cpants}->{$package}->{author} = clone($cpants->{$package}->{author});
 
     if (not exists $cpants->{$package}->{description}) {
       my $description = $module->description;
       $description ||= $self->get_description($module->module, $package);
       $cpants->{$package}->{description} = $description;
     }
+    $cpants->{cpants}->{$package}->{description} = clone($cpants->{$package}->{description});
   }
 
   $self->save_cpants($cpants);
@@ -59,6 +66,7 @@ print "* $package *\n";
     $file =~ s{/}{-}g;
     $file =~ s/^-//;
     $file =~ s/\.pm$//;
+    $file =~ s/^lib-//;
 #    my $dist = adist($package, $file);
     my $dist = abs(adist($file, $package));
 #    print "$file: $dist\n";

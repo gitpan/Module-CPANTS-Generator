@@ -4,10 +4,11 @@ use Carp;
 use File::Spec::Functions qw(catfile);
 use File::Copy;
 use File::Path;
+use File::Find::Rule;
 use Module::CPANTS::Generator;
 use base 'Module::CPANTS::Generator';
 use vars qw($VERSION);
-$VERSION = "0.003";
+$VERSION = "0.004";
 
 sub unpack {
   my $self = shift;
@@ -42,9 +43,22 @@ sub unpack {
       system("unzip", "-q", $f);
       $self->check($package);
     } elsif ($f =~ /\.pm\.gz$/) {
+      next;
     } else {
       print "Unknown format: $f\n";
+      next;
     }
+    my $packedsize = -s $f;
+    my @files = File::Find::Rule->file()->in($package);
+    my $unpackedsize = 0;
+    foreach my $file (@files) {
+      my $filesize = -s $file;
+      $unpackedsize += $filesize;
+    }
+    $cpants->{$package}->{size} = {
+      packed => $packedsize,
+      unpacked => $unpackedsize,
+    };
   }
 
   $self->save_cpants($cpants);

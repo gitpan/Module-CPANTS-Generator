@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use Test::More tests => 8;
+use Test::More tests => 11;
 
 use_ok("Module::CPANTS");
 
@@ -41,8 +41,27 @@ is_deeply($testers, {
 
 my $lines = $data->{lines};
 is_deeply($lines, {
-      'nonpod' => 170,
+      'nonpod' => 184,
       'pod' => 95,
+      'pod_errors' => 0,
       'total' => 265,
       'with_comments' => 8,
 });
+
+my $size = $data->{size};
+is_deeply($size, {
+      'packed' => 3883,
+      'unpacked' => 13078,
+});
+
+is($data->{releases}, 5);
+
+my $uses = $data->{uses};
+is_deeply($uses, [
+      'Graphics::ColorNames',
+      'List::Util',
+      'strict',
+      'vars'
+    ]
+);
+

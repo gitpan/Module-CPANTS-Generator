@@ -19,13 +19,16 @@ Module-CPANTS/t/signature.t
 Module-CPANTS/t/simple.t
 README
 SIGNATURE
+TODO
 examples/generate.pl
 examples/view.pl
 lib/Module/CPANTS/Generator.pm
+lib/Module/CPANTS/Generator/Backpan.pm
 lib/Module/CPANTS/Generator/Files.pm
 lib/Module/CPANTS/Generator/ModuleInfo.pm
 lib/Module/CPANTS/Generator/Prereq.pm
 lib/Module/CPANTS/Generator/Pod.pm
 lib/Module/CPANTS/Generator/Testers.pm
 lib/Module/CPANTS/Generator/Unpack.pm
+lib/Module/CPANTS/Generator/Uses.pm
 t/signature.t

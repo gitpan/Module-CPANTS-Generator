@@ -4,7 +4,7 @@ use Cwd;
 use Storable;
 use strict;
 use vars qw($VERSION);
-$VERSION = "0.005";
+$VERSION = "0.006";
 
 sub new {
   my $class = shift;

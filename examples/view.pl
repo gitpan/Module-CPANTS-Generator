@@ -12,6 +12,7 @@ my $arg = shift || die "Pass a string to search for";
 
 my $cpants = retrieve (catfile "$FindBin::Bin/../", "cpants.store")
   || die "Unable to find data";
+$cpants = $cpants->{cpants};
 
 foreach my $dist (sort keys %$cpants) {
   next unless $dist =~ /$arg/;
