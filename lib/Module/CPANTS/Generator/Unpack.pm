@@ -8,7 +8,7 @@ use File::Spec::Functions qw(catdir catfile);
 use File::stat;
 
 use vars qw($VERSION);
-$VERSION = "0.23";
+$VERSION = "0.24";
 
 
 ##################################################################
@@ -23,15 +23,15 @@ sub analyse {
     my $temppath=$cpants->temppath;
     my $di=$cpants->distnameinfo;
 
-    unless ($cpants->conf->force) {
+#    unless ($cpants->conf->force) {
 	# todo:
 	# read in old file and check 'generated_with'
 	# dont skip if version is newer
-	if (-e $cpants->metricfile) {
-	    $cpants->abort(1);
-	    return;
-	}
-    }
+#	if (-e $cpants->metricfile) {
+#	    $cpants->abort(1);
+#	    return;
+#	}
+#    }
 
     # distinfo
     my $ext=$di->extension || '';
@@ -127,7 +127,7 @@ __PACKAGE__->kwalitee_definitions
      name=>'extractable',
      type=>'basic',
      error=>q{This package uses an unknown packaging format. CPANTS can handle tar.gz, tgz and zip archives. No kwalitee metrics have been calculated.},
-     code=>sub { shift->{extractable} ? 0.5 : -1 },
+     code=>sub { shift->{extractable} ? 1 : -1 },
     },
     {
      name=>'extracts_nicely',
@@ -150,21 +150,20 @@ __PACKAGE__->kwalitee_definitions
 ##################################################################
 
 sub sql_fields_dist {
-    return
-      "dist text,
-       package text,
-       dist_without_version text,
-       version text,
-       version_major text,
-       version_minor text,
-       extension text,
-       extractable int,
-       extracts_nicely int,
-       size_packed int,
-       size_unpacked int,
-       released_epoch text,
-       released_date text,
-      ";
+    return "   dist text,
+   package text,
+   dist_without_version text,
+   version text,
+   version_major text,
+   version_minor text,
+   extension text,
+   extractable integer,
+   extracts_nicely integer,
+   size_packed integer,
+   size_unpacked integer,
+   released_epoch text,
+   released_date text,
+";
 }
 
 1;

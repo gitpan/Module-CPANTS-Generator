@@ -5,13 +5,14 @@ use base 'Module::CPANTS::Generator';
 use CPANPLUS::Backend;
 
 use vars qw($VERSION $cp %packages);
-$VERSION = "0.23";
+$VERSION = "0.24";
 
 $cp=Module::CPANTS::Generator->get_cpan_backend;
 
-%packages=map {$_->package=>{author=>$_->author,dslip=>$_->dslip}}
-  grep {$_->package} values %{$cp->module_tree};
-
+if ($cp) {
+    %packages=map {$_->package=>{author=>$_->author,dslip=>$_->dslip}}
+      grep {$_->package} values %{$cp->module_tree};
+}
 
 ##################################################################
 # Analyse
@@ -41,9 +42,8 @@ sub analyse {
 ##################################################################
 
 sub sql_fields_dist {
-    return "
-author text,
-dslip text,
+    return "   author text,
+   dslip text,
 ";
 }
 
@@ -66,7 +66,7 @@ Thomas Klausner <domm@zsi.at> http://domm.zsi.at
 
 =head1 COPYRIGHT
 
-Module::CPANTS::Generator::Unpack is Copyright (c) 2004 Thomas
+Module::CPANTS::Generator::CPAN is Copyright (c) 2004 Thomas
 Klausner, ZSI.  All rights reserved.
 
 You may use and distribute this module according to the same terms

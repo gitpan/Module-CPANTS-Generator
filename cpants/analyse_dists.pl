@@ -12,6 +12,8 @@ use strict;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Term::ProgressBar;
+use YAML qw(:all);
+use File::Spec::Functions qw(catfile);
 
 use Module::CPANTS::Generator;
 my $class="Module::CPANTS::Generator";
@@ -21,19 +23,55 @@ $class->load_generators;
 opendir(DIR,$class->distsdir) || die "$!";
 my @files=grep {!/^\./} readdir(DIR);
 
+# list of all active dists
+my $dists=LoadFile('dists.yml');
+
+# get list of metrics, some might be outdated
+my %old_metrics;
+opendir(MET,$class->metricdir) || die "cannot open metricsdir ".$class->metricdir.": $!";
+while (my $f=readdir(MET)) {
+    chomp($f);
+    next if $f=~/^\./;
+    next if $f eq 'README';
+    $old_metrics{$f}=1;
+}
+
+
 my $progress=Term::ProgressBar->new({
 				     name=>'Analyse Dists   ',
-				     count=>scalar @files,
+				     count=>scalar keys %$dists,
 				    }) unless $class->conf->no_bar;
 
+my $cpants_version=$Module::CPANTS::Generator::VERSION;
 
-foreach my $f (@files) {
+my $id=1;
+
+while (my($f,$status)=each(%$dists)) {
     next if $f=~/^\./;
     chomp($f);
 
-    my $cpants=$class->new($f);
+    $progress->update() unless $class->conf->no_bar;
+    next unless (-e catfile($class->distsdir,$f));
 
-    print "\n",$cpants->package,"\n" if $cpants->conf->no_bar;
+    my $cpants=$class->new($f);
+    my $metricfile=$cpants->metricfile;
+    delete $old_metrics{$cpants->dist.'.yml'};
+
+    print $cpants->package,"\n" if $cpants->conf->no_bar;
+
+    if ($status eq 'old' && -e $metricfile && !$cpants->conf->force) {
+	my $oldmetric=LoadFile($metricfile);
+	my $generated_with=$oldmetric->{generated_with};
+	$generated_with=~s/[^\.\d]//g;
+#	print "generated $generated_with\n";
+	next if $generated_with eq $cpants_version;
+	unlink($metricfile);
+
+    } elsif ($status eq 'del') {
+	unlink($metricfile);
+	next;
+    }
+
 
     foreach my $generator (@{$cpants->available_generators}) {
 	print "+ $generator\n" if $cpants->conf->no_bar;
@@ -41,11 +79,20 @@ foreach my $f (@files) {
 	last if $cpants->abort;
     }
 
+    $cpants->{metric}{id}=$id;
+    $id++;
+
     $cpants->write_metric;
     $cpants->tidytemp;
-
-    $progress->update() unless $class->conf->no_bar;
 }
+
+
+# delete old metrics
+foreach my $del (keys %old_metrics) {
+    print "purge $del\n" if $class->conf->no_bar;
+    unlink(catfile($class->metricdir,$del));
+}
+
 
 __END__
 

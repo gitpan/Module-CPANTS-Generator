@@ -25,39 +25,14 @@ $cpants->load_generators;
 # create DB
 #-----------------------------------------------------------------
 if (-e 'cpants.db') {
-    move('cpants.db','cpants_'.DateTime->now->ymd.'.db');
+    my $mtime=(stat('cpants.db'))[9];
+    move('cpants.db','cpants_'.DateTime->from_epoch(epoch=>$mtime)->ymd.'.db');
 }
 my $DBH=DBI->connect("dbi:SQLite:dbname=cpants.db");
 $cpants->DBH($DBH);
 
-# create dist table and var tables from CPANTS::Generators
-{
-    my $flds;
-    my @other_tables;
-    foreach my $generator (@{$cpants->available_generators}) {
-	$flds.=$generator->sql_fields_dist if $generator->can('sql_fields_dist');
-	push(@other_tables,@{$generator->sql_other_tables}) if $generator->can('sql_other_tables');
-    }
-    # cleanup flds
-    $flds=~s/,\s+$//;
-
-    $DBH->do("
-create table dist (id integer primary key,
-generated_at text,
-generated_with,
-$flds
-)");
-
-    foreach (@other_tables) {
-	$DBH->do($_);
-    }
-
-}
-
-# create kwalitee table
-{
-    my $sql=$cpants->create_kwalitee_table;
-    $DBH->do($sql);
+foreach (@{$cpants->get_db_schema}) {
+    $DBH->do($_);
 }
 
 

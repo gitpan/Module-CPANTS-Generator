@@ -38,10 +38,9 @@ foreach my $f (@files) {
     delete($metric->{kwalitee});
 
     $cpants->determine_kwalitee('basic',$metric);
-    $cpants->write_metric($metric);
+    $cpants->write_metric($metric,$f);
 
     $progress->update() unless $cpants->conf->no_bar;
-    print "done\n" if $cpants->conf->no_bar;
 }
 
 

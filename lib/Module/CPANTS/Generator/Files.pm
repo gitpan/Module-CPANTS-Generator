@@ -6,7 +6,7 @@ use File::Find;
 use File::Spec::Functions qw(catdir catfile abs2rel);
 
 use vars qw($VERSION);
-$VERSION = "0.23";
+$VERSION = "0.24";
 
 
 ##################################################################
@@ -166,26 +166,24 @@ __PACKAGE__->kwalitee_definitions
 
 sub sql_fields_dist {
     return
-"
-  files int,
-  files_list text,
-  dirs int,
-  dirs_list text,
-  symlinks int,
-  symlinks_list text,
-  bad_permissions int,
-  bad_permissions_list text,
-
-  file_makefile_pl int,
-  file_build_pl int,
-  file_readme int,
-  file_manifest int,
-  file_meta_yml int,
-  file_signature int,
-  file_ninja int,
-  file_test_pl int,
-  dir_lib int,
-  dir_t int,
+"   files integer,
+   files_list text,
+   dirs integer,
+   dirs_list text,
+   symlinks integer,
+   symlinks_list text,
+   bad_permissions integer,
+   bad_permissions_list text,
+   file_makefile_pl integer,
+   file_build_pl integer,
+   file_readme integer,
+   file_manifest integer,
+   file_meta_yml integer,
+   file_signature integer,
+   file_ninja integer,
+   file_test_pl integer,
+   dir_lib integer,
+   dir_t integer,
 ";
 }
 

@@ -19,7 +19,7 @@ use FindBin;
 use DateTime;
 
 use vars qw($VERSION);
-$VERSION = "0.23";
+$VERSION = "0.24";
 
 
 ##################################################################
@@ -45,13 +45,13 @@ $class->mk_accessors
 {
     my $config=AppConfig->new();
     $config->define
-      (qw(force reload_cpan no_authors no_bar print_distname),
+      (qw(force dont_reload_cpan no_authors no_bar print_distname),
        qw(limit=s),
        'tempdir=s'=>{DEFAULT=>'temp'},
        'distsdir=s'=>{DEFAULT=>'dists'},
        'metricdir=s'=>{DEFAULT=>'metrics'},
        'cpan=s'=>{DEFAULT=>'/home/cpan/'},
-       'generators=@'=>{DEFAULT=>[qw(Unpack Files FindModules Pod Prereq CPAN)]}
+       'generators=@'=>{DEFAULT=>[qw(Unpack Files FindModules Pod Prereq CPAN Uses)]}
       );
     $config->args;
     $class->conf($config);
@@ -92,7 +92,11 @@ sub get_cpan_backend {
 	return $self->cpan_backend;
     }
 
-    my $cp=CPANPLUS::Backend->new(conf => {verbose => 0, debug => 0});
+    my $cp;
+
+    eval {$cp=CPANPLUS::Backend->new(conf => {verbose => 0, debug => 0});};
+    return undef if $@;
+
     $self->cpan_backend($cp);
 
     # set local cpan mirror if there is one - RECOMMENDED
@@ -144,6 +148,12 @@ sub write_metric {
 	$metric=$proto->{metric};
     } else {
 	$metric=shift;
+	die "No metric\n",caller(),"\n" unless $metric;
+	unless ($metric->{dist}) {
+	    use Data::Dumper;
+	    print Dumper($metric,$proto);
+	    die "no metirc $metric ".shift;
+	}
 	$file=catfile($proto->metricdir, $metric->{dist}.'.yml');
     }
 
@@ -174,21 +184,19 @@ sub load_generators {
     my $self=shift;
     my $generators=$self->conf->generators;
 
-#    print "Loading Generators.\n" unless $self->conf->quiet;
-
     {
 	no strict 'refs';
 	foreach my $gen (@$generators) {
 	    $gen="Module::CPANTS::Generator::$gen";
 	    eval "require $gen";
 	    croak "cannot load $gen\n$@" if $@;
-#	    print "+ loaded $gen\n" if $self->conf->verbose;
 	}
     }
 
     $self->available_generators($generators);
     return;
 }
+
 
 
 sub kwalitee_indicators {
@@ -205,11 +213,18 @@ sub kwalitee_indicators {
 }
 
 
+
+
+sub total_kwalitee {
+    my $class=shift;
+    my $ind=$class->kwalitee_indicators;
+    return scalar @$ind;
+}
+
 sub determine_kwalitee {
     my $class=shift;
     my $type=shift;
     my $metric=shift;
-#    print $metric->{dist}."\n" unless $class->conf->quiet;
 
     my $indicators=$class->kwalitee_indicators;
 
@@ -217,7 +232,7 @@ sub determine_kwalitee {
 	next unless $ind->{type} eq $type;
 	my $code=$ind->{code};
 	my $name=$ind->{name};
-	my $rv=&$code($metric);
+	my $rv=&$code($metric) || 0;
 
 	if ($rv == -1) {
 	    $metric->{kwalitee}={kwalitee=>0};
@@ -227,16 +242,12 @@ sub determine_kwalitee {
 	    last;
 	} elsif ($rv) {
 	    $metric->{kwalitee}{$name}=1;
-
-	    next if $rv<1;
 	    $metric->{kwalitee}{kwalitee}+=1;
 
 	} else {
-#	    print "+ failed $name\n" if $class->conf->verbose;
 	    $metric->{kwalitee}{$name}=0;
 	}
     }
-#    print "+ Kwalitee: ".$metric->{kwalitee}{kwalitee}."\n" if $class->conf->verbose;
     return;
 }
 
@@ -247,7 +258,8 @@ sub yaml2db {
     my $metric=shift;
     my $DBH=$class->DBH;
     my $dist=$metric->{dist};
-    my (@keys,@vals,@other_tables);
+    my $distid=$metric->{id};
+    my (@keys,@vals);
 
     while (my ($k,$v)=each %$metric) {
 	my $ref=ref($v);
@@ -260,61 +272,68 @@ sub yaml2db {
 	    next unless $first;
 	    if (ref($first) eq 'HASH') {
 		foreach my $sv (@$v) {
-		    my @columns=('distid','dist');
-		    my @data=('DISTID',$dist);
+		    my @columns=('distid');
+		    my @data=($distid);
 		    foreach my $sk (keys %$sv) {
 			push(@columns,$sk);
 			my $val=$sv->{$sk};
 			push(@data,$val);
 		    }
-		    my $sql="insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")";
-		    push(@other_tables,$sql);
+		    $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
 		}
 	    } else {
 		push(@keys,$k);
 		push(@vals,join(',',@$v));
 	    }
 	} elsif ($ref eq 'HASH') {
-	    my @columns=('distid','dist');
-	    my @data=('DISTID',$dist);
+	    my @columns=('distid');
+	    my @data=($distid);
 	    foreach my $sk (keys %$v) {
 		push(@columns,$sk);
 		my $val=$v->{$sk};
 		$val=join(',',@$val) if (ref($val) eq 'ARRAY');
 		push(@data,$val);
 	    }
-	    my $sql="insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")";
-	    push(@other_tables,$sql);
+	    $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
 	}
     }
     # insert into dist
     $DBH->do("insert into dist (".join(',',@keys).") values (".join(',',map{'?'}@vals).")",undef,@vals);
-    my $id=$DBH->func('last_insert_rowid');
 
-    foreach my $sql (@other_tables) {
-	$sql=~s/DISTID/$id/;
-	$DBH->do($sql);
-    }
-
+    $class->write_metric($metric);
     return;
 }
 
+sub get_db_schema {
+    my $self=shift;
+    my $flds;
+    my @tables;
+    foreach my $generator (@{$self->available_generators}) {
+	$flds.=$generator->sql_fields_dist if $generator->can('sql_fields_dist');
+	push(@tables,@{$generator->sql_other_tables}) if $generator->can('sql_other_tables');
+    }
+    # cleanup flds
+    $flds=~s/,\s+$//;
 
-sub create_kwalitee_table {
-    my $class=shift;
+    unshift(@tables,"create table dist (
+   id integer primary key,
+   generated_at text,
+   generated_with text,
+$flds
+)");
 
     my @sql_kw="
 create table kwalitee (
-   id integer primary key,
-   distid integer,
-   dist text,
-   
+   distid integer primary key,
    kwalitee integer";
 
-    foreach my $kw (@{$class->kwalitee_indicators}) {
+    foreach my $kw (@{$self->kwalitee_indicators}) {
 	push(@sql_kw,"   ".$kw->{name}." integer");
     }
-    return (join(",\n",@sql_kw)."\n)");
+    push(@tables,join(",\n",@sql_kw)."\n)");
+    push(@tables,"CREATE INDEX kwalitee_kwalitee_idx on kwalitee (kwalitee)");
+
+    return \@tables;
 }
 
 

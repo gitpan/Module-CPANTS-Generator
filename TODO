@@ -1,13 +1,15 @@
 #-----------------------------------------------------------------
 # TODO Module-CPANTS-Generator
-# $Rev: 66 $
-# $Date: 2004-09-07 10:04:35 +0200 (Tue, 07 Sep 2004) $ 
+# $Rev: 82 $
+# $Date: 2004-10-01 22:39:56 +0200 (Fri, 01 Oct 2004) $ 
 #-----------------------------------------------------------------
 
 
 #-----------------------------------------------------------------
-# for release 0.23
+# for release 0.24
 #-----------------------------------------------------------------
+
+* release_date is buggy
 
 #-----------------------------------------------------------------
 # The stuff that's bound to stay a while on the TODO-list 
@@ -22,7 +24,10 @@
 
 * lint.pl
 
+* extracts_nicely: discern between proper dist (Dist-Name-0.10),
+   semi-proper dists (some-dir) and really bad dists (spew all in cwd)
 
+* has it a LICENSE? which?
 
 * entries in the testers db
 
@@ -33,8 +38,6 @@
 * Autor != R.U.Thor
 
 * check if MANIFEST lists all files
-
-* uses strict
 
 * Prereqs listed are complete
 

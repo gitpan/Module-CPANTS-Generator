@@ -7,7 +7,7 @@ use YAML qw(:all);
 use Module::MakefilePL::Parse;
 
 use vars qw($VERSION);
-$VERSION = "0.23";
+$VERSION = "0.24";
 
 ##################################################################
 # Analyse
@@ -35,7 +35,9 @@ sub analyse {
     }
 
     if (grep {/^Build\.PL$/} @$files) {
-	$prereq=parse_prereq($cpants,'Build.PL');
+	eval {
+	    $prereq=parse_prereq($cpants,'Build.PL');
+	};
 	if ($prereq) {
 	    store_prereq($cpants,$prereq);
 	    return;
@@ -51,7 +53,6 @@ sub analyse {
 	    # oder
 	    # Argument "v1.20.3" isn't numeric in addition (+) at /usr/local/share/perl/5.8.3/Module/MakefilePL/Parse.pm line 74, <$fh> line 14.
 	    # Bareword "Glib::" refers to nonexistent package at (eval 2550) line 1, <$fh> line 153.
-
 	    my $parser=Module::MakefilePL::Parse->new(join("",<$fh>));
 	    $prereq=$parser->required;
 	};
@@ -128,7 +129,7 @@ __PACKAGE__->kwalitee_definitions
 	 my $modules=$metric->{modules_in_dist};
 	 foreach (@$modules) {
 	     my $module=$_->{module};
-	     $required_by+=$DBH->selectrow_array("select count(dist) from prereq where requires=?",undef,$module);
+	     $required_by+=$DBH->selectrow_array("select count(distid) from prereq where requires=?",undef,$module);
 	 }
 
 	 if ($required_by>0) {
@@ -137,7 +138,7 @@ __PACKAGE__->kwalitee_definitions
 	 }
 
 	 if ($required_by>2) {
-	     $DBH->do("update kwalitee set kwalitee=?,is_prereq=1 where dist=?",undef,$metric->{kwalitee}{kwalitee}+1,$metric->{dist}) || die "foo $!";
+	     $DBH->do("update kwalitee set kwalitee=?,is_prereq=1 where distid=?",undef,$metric->{kwalitee}{kwalitee}+1,$metric->{id}) || die "foo $!";
 	     return 1;
 	 }
 	 return 0;
@@ -151,8 +152,7 @@ __PACKAGE__->kwalitee_definitions
 ##################################################################
 
 sub sql_fields_dist {
-    return "
-required_by integer,
+    return "   required_by integer,
 ";
 }
 
@@ -162,10 +162,13 @@ sub sql_other_tables {
 "create table prereq (
   id integer primary key,
   distid integer,
-  dist text,
   requires text,
   version text
-)"];
+)",
+"CREATE INDEX prereq_distid_idx on prereq (distid)",
+"CREATE INDEX prereq_requires_idx on prereq (requires)
+",
+];
 }
 
 

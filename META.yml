@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Module-CPANTS-Generator
-version: 0.23
+version: 0.24
 author:
   - Thomas Klausner <domm@zsi.at> http://domm.zsi.at
   - |-
@@ -20,8 +20,10 @@ requires:
   DBD::SQLite: 0.31
   DBI: 1.42
   DateTime: 0.21
+  Module::ExtractUse: 0.15
   Module::MakefilePL::Parse: 0.11
   Pod::Simple::Checker: 2.02
+  Pod::Strip: 1.00
   Storable: 2.09
   Term::ProgressBar: 1.18
   Test::More: 0.01
@@ -29,23 +31,29 @@ requires:
 provides:
   Module::CPANTS::Generator:
     file: lib/Module/CPANTS/Generator.pm
-    version: 0.23
+    version: 0.24
   Module::CPANTS::Generator::CPAN:
     file: lib/Module/CPANTS/Generator/CPAN.pm
-    version: 0.23
+    version: 0.24
   Module::CPANTS::Generator::Files:
     file: lib/Module/CPANTS/Generator/Files.pm
-    version: 0.23
+    version: 0.24
+  Module::CPANTS::Generator::FindModules:
+    file: lib/Module/CPANTS/Generator/FindModules.pm
+    version: 0.24
   Module::CPANTS::Generator::Pod:
     file: lib/Module/CPANTS/Generator/Pod.pm
-    version: 0.23
+    version: 0.24
   Module::CPANTS::Generator::Prereq:
     file: lib/Module/CPANTS/Generator/Prereq.pm
-    version: 0.23
+    version: 0.24
   Module::CPANTS::Generator::Unpack:
     file: lib/Module/CPANTS/Generator/Unpack.pm
-    version: 0.23
+    version: 0.24
+  Module::CPANTS::Generator::Uses:
+    file: lib/Module/CPANTS/Generator/Uses.pm
+    version: 0.24
   text:
     file: lib/Module/CPANTS/Generator/Unpack.pm
-    version: 0.23
+    version: 0.24
 generated_by: Module::Build version 0.25

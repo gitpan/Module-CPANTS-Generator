@@ -6,7 +6,7 @@ use base 'Module::CPANTS::Generator';
 use File::Spec::Functions qw(catfile);
 
 use vars qw($VERSION);
-$VERSION = "0.23";
+$VERSION = "0.24";
 
 
 ##################################################################
@@ -58,8 +58,7 @@ __PACKAGE__->kwalitee_definitions
 ##################################################################
 
 sub sql_fields_dist {
-    return "
-pod_errors int,
+    return "   pod_errors integer,
 "
 }
 

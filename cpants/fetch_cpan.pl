@@ -15,37 +15,51 @@ use Module::CPANTS::Generator;
 use CPANPLUS;
 use Carp;
 use Term::ProgressBar;
-
-# fetch all dists from CPAN and store in packed
-
-# TODO: remove all dists in distsdir that aren't current
+use YAML qw(:all);
 
 my $cpants='Module::CPANTS::Generator';
-
 $cpants->setup_dirs;
 my $cp=$cpants->get_cpan_backend;
-
 my $limit=$cpants->conf->limit || 0;
 
 # reload CPAN indices
-if ($cpants->conf->reload_cpan) {
-    print "+ reload CPAN indices\n" if $cpants->conf->verbose;
+unless ($cpants->conf->dont_reload_cpan) {
     $cp->reload_indices(update_source => 1);
 }
 
-# get list of packages
+# get list of allready downloaded packages
+my %downloaded;
+opendir(DISTS,$cpants->distsdir) || die "cannot open distsdir ".$cpants->distsdir.": $!";
+while (my $f=readdir(DISTS)) {
+    chomp($f);
+    next if $f=~/^\./;
+    next if $f eq 'README';
+    $downloaded{$f}=1;
+}
+
+
+# get list of packages on CPAN
 my (%seen,@packages);
 foreach my $module (values %{$cp->module_tree}) {
     my $package=$module->package;
-
     next unless $package;
 
+    # skip some stuff
     next if $package=~/^perl[-\d]/;
     next if $package=~/^ponie-/;
     next if $package=~/^parrot-/;
     next if $package=~/^Bundle-/;
-    next if $seen{$package};   # allready seen
-    $seen{$package}=1;
+
+    next if $seen{$package};
+    $seen{$package}='new';
+
+    if ($downloaded{$package}) {
+	delete $downloaded{$package};
+	print "skip $package\n" if $cpants->conf->no_bar;
+	$seen{$package}='old';
+	next;
+    }
+
     push(@packages,$module);
 }
 
@@ -58,7 +72,7 @@ foreach my $module (@packages) {
     my $package=$module->package;
 
     $module->fetch(fetchdir=>$cpants->distsdir);
-#    print "$package\n";
+    print "fetch $package\n" if $cpants->conf->no_bar;
 
     if ($limit) {
 	last if scalar keys %seen > $limit;
@@ -67,6 +81,15 @@ foreach my $module (@packages) {
     $progress->update() unless $cpants->conf->no_bar;
 }
 
+# delete old dists
+foreach my $del (keys %downloaded) {
+    print "purge $del\n" if $cpants->conf->no_bar;
+    $seen{$del}='del';
+    system("rm",$cpants->distsdir."/".$del);
+}
+
+
+DumpFile('dists.yml',\%seen);
 
 __END__
 

@@ -16,6 +16,8 @@ my $build = Module::Build->new
 		   'DBI' => '1.42',
 		   'DateTime' => '0.21',
 		   'Module::MakefilePL::Parse' => '0.11',
+		   'Module::ExtractUse' => '0.15',
+		   'Pod::Strip' => '1.00',
 		   'Pod::Simple::Checker' => '2.02',
 		   'Storable' => '2.09',
 		   'Test::More'  => '0.01',
@@ -26,3 +28,4 @@ my $build = Module::Build->new
 );
 
 $build->create_build_script;
+
