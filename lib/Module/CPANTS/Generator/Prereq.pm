@@ -1,124 +1,102 @@
 package Module::CPANTS::Generator::Prereq;
+use warnings;
 use strict;
-use Carp;
-use File::Spec::Functions;
-use vars qw($recursive $requires $VERSION);
-use Module::CPANTS::Generator;
 use base 'Module::CPANTS::Generator';
-$VERSION = "0.005";
+
+use vars(qw(%kwalitee));
+
 
 sub generate {
-  my $self = shift;
+    my $class=shift;
+    my $metric=shift;
 
-  my $cpants = $self->grab_cpants;
-  my $cp = $self->cpanplus || croak("No CPANPLUS object");
+    my $k=0;
+    my $files=$metric->files;
+    my $prereq_file;
 
-  my $count = 0;
-  my $total;
-  local($requires, $recursive);
-  my($requires_module);
+    if (grep {/Makefile\.PL$/} @$files) {
+	$prereq_file='Makefile.PL';
+    }
+    if (grep {/Build\.PL$/} @$files) {
+	$prereq_file='Build.PL';
+    }
 
-  foreach my $dist (sort grep { -d } <*>) {
-    my $filename = catfile($dist, 'Makefile.PL');
-    $count++;
-    next unless -f $filename;
+    return unless $prereq_file;
 
-    open(IN, $filename);
+    open(IN,$prereq_file);
     my $m = join '', <IN>;
     close IN;
 
-    my $p = $1 if $m =~ m/PREREQ_PM.*?=>.*?\{(.*?)\}/s;
-    next unless $p;
+    my $p;
+    if ($prereq_file eq 'Makefile.PL') {
+	$p = $1 if $m =~ m/PREREQ_PM.*?=>.*?\{(.*?)\}/s;
+    } elsif ($prereq_file eq 'Build.PL') {
+	$p = $1 if $m =~ m/requires.*?=>.*?\{(.*?)\}/s;
+    }
+    return unless $p;
+
     # get rid of lines which are only comments
     $p = join "\n", grep { $_ !~ /^\s*#/ } split "\n", $p;
     # get rid of empty lines
     $p = join "\n", grep { $_ !~ /^\s*$/ } split "\n", $p;
 
     if ($p =~ /=>/ or $p =~ /,/) {
-      my $prereqs;
-      my $code = "{no strict; \$prereqs = { $p\n}}";
-      eval $code;
-#    print "WARN: $p\n$@\n" if $@;
-      foreach my $k (sort keys %$prereqs) {
-	my $d2 = $cp->module_tree->{$k};
-	if (not defined $d2) {
-#	print "$k not found ($dist)\n";
-	  next;
+	my $prereqs;
+
+	my $code = "{no strict; \$prereqs = { $p\n}}";
+	eval $code;
+
+	my @prereq;
+	while (my ($module,$version)=each%$prereqs) {
+	    push(@prereq,{
+			  requires=>$module,
+			  version=>$version,
+			 });
 	}
-	$requires_module->{$dist}->{$k} = $prereqs->{$k};
-	$requires->{$dist}->{$d2->package}++;
-	$total->{$k}++;
-      }
-    } elsif ($p) {
-#    print "??? uhoh: $p\n";
+	$metric->add(prereq=>\@prereq);
     }
-  }
-
-  foreach my $o (sort keys %$requires) {
-    foreach my $p (sort keys %{$requires->{$o}}) {
-      $self->fill($o, $p);
-    }
-  }
-
-  my $requires_array = $self->fold($requires);
-  my $recursive_array = $self->fold($recursive);
-
-  foreach my $k (keys %$requires) {
-    $cpants->{cpants}->{$k}->{requires_module} = $requires_module->{$k};
-    $cpants->{cpants}->{$k}->{requires} = $requires_array->{$k};
-    $cpants->{cpants}->{$k}->{requires_recursive} = $recursive_array->{$k};
-  }
-
-  $self->save_cpants($cpants);
-  return $count;
 }
 
-sub fill {
-  my($self, $key, $value) = @_;
-  return if $recursive->{$key}->{$value}++;
 
-  my $c = $requires->{$value};
-  foreach my $d (sort keys %$c) {
-    $self->fill($key, $d);
-  }
+sub create_db {
+    return
+[
+"create table prereq (
+  dist varchar(150),
+  requires varchar(150),
+  version varchar(25)
+)",
+"CREATE INDEX prereq_dist_idx on prereq (dist)"
+];
 }
 
-sub fold {
-  my($self, $hash) = @_;
-  my $folded;
-  foreach my $d (sort keys %$hash) {
-    $folded->{$d} = [sort keys %{$hash->{$d}}];
-  }
-  return $folded;
-}
 
 1;
-
-
 __END__
+
+=pod
 
 =head1 NAME
 
-Module::CPANTS::Generator::Prereq - Generate prereq
+Module::CPANTS::Generator::Prereq - parse PREREQ_PM and requires (Build.PL)
 
 =head1 SYNOPSIS
 
-  use Module::CPANTS::Generator::Prereq;
-
-  my $p = Module::CPANTS::Generator::Prereq->new;
-  $p->cpanplus($cpanplus);
-  $p->directory("unpacked");
-  $p->generate;
-
 =head1 DESCRIPTION
-
-This module is part of the beta CPANTS project. It scans through an
-unpacked CPAN looking for Makefile.PLs and adds prerequisite informatin.
 
 =head1 AUTHOR
 
-Leon Brocard <acme@astray.com>
+Thomas Klausner <domm@zsi.at> http://domm.zsi.at
 
-=head1 LICENSE
+based on work by Leon Brocard <acme@astray.com>
 
-This code is distributed under the same license as Perl.
+=head1 COPYRIGHT
+
+Module::CPANTS::Metrics is Copyright (c) 2003 Thomas Klausner, ZSI.
+All rights reserved.
+
+You may use and distribute this module according to the same terms
+that Perl is distributed under.
+
+=cut
+

@@ -1,5 +1,5 @@
 NAME
-    Module::CPANTS::Generator - Generate Module::CPANTS
+    Module::CPANTS::Generator - CPAN Testing Service and Kwalitee Calculator
 
 DESCRIPTION
     This module is part of the beta CPANTS project. It consists of many
@@ -7,8 +7,13 @@ DESCRIPTION
     the Module::CPANTS distribution. You only need this if you want to add
     more metrics to Module::CPANTS.
 
+    Please note that CPAN::DistnameInfo Version 0.04 is needed, which is not
+    released yet. You can get it from here:
+    http://svn.mutatus.co.uk/browse/CPAN-DistnameInfo/trunk/
+    
+
 AUTHOR
-    Leon Brocard <acme@astray.com>
+    Thomas Klausner, <domm@zsi.at>
 
 LICENSE
     This code is distributed under the same license as Perl.

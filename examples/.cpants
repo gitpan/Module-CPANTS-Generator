@@ -1,0 +1,17 @@
+# AppConfig file
+
+# path to local cpan mirror - I hope nobody is crazy enough to
+# use CPANTS over the network
+cpan = /home/cpan
+
+#   tests=>[qw(Backpan Files ModuleInfo Pod Prereq Testers Uses)],
+tests = Files
+tests = Prereq
+
+# reporters
+reporter = DB
+reporter = asSQLite
+reporter = asHash
+
+# DBI info
+dbi_connect = dbi:mysql:cpants

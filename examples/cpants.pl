@@ -1,0 +1,75 @@
+#!/usr/bin/perl -w
+use strict;
+use CPANPLUS;
+use Data::Dumper;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use Module::CPANTS::Generator;
+
+# get object
+my $cpants=Module::CPANTS::Generator->new;
+
+
+# CPANPLUS
+print "Loading CPANPLUS\n";
+my $cp=CPANPLUS::Backend->new(conf => {verbose => 0, debug => 0});
+
+# set local cpan mirror if there is one - RECOMMENDED
+if (my $local_cpan=$cpants->conf->cpan) {
+    my $cp_conf=$cp->configure_object;
+    $cp_conf->_set_ftp(urilist=>
+		       [{
+			 scheme => 'file',
+			 path   => $local_cpan,
+			}]);
+}
+
+if ($cpants->conf->reload_cpan) {
+    print "+ reload CPAN indices\n";
+    $cp->reload_indices(update_source => 1);
+}
+
+# get dist list from DB
+my $dbh=Module::CPANTS::Reporter::DB->DBH;
+my %seen;
+%seen=map {$_->[0]=>1} @{$dbh->selectall_arrayref("select package from cpants")} unless $cpants->conf->force;
+
+# for limiting number of tested packages
+my $l=$cpants->conf->limit;
+my $cnt=1;
+
+# get all modules from CPAN and run tests
+foreach my $module (sort { $a->module cmp $b->module } values %{$cp->module_tree}) {
+    my $package=$module->package;
+    unless ($package) {
+	print "- ".$module->module.".: No package found, skipping\n";
+	next;
+    }
+    next if $seen{$package}++;   # allready seen
+
+    my $metric=$cpants->unpack_cpanplus($module);
+
+    if (my $emsg=$metric->error) {
+	print $emsg;
+	next;
+    }
+
+    # run tests
+    chdir($metric->unpacked);
+    foreach my $testclass (@{$cpants->tests}) {
+	print "\trunning $testclass\n";
+	$testclass->generate($metric);
+    }
+    $metric->report;
+
+    # limiting
+    last if $l && $cnt==$l;
+    $cnt++;
+}
+
+foreach my $rep (@{$cpants->reporter}) {
+    $rep->finish;
+}
+
+# TODO: clean up
+# delete all dirs in $unpack_dir that are not in %seen
