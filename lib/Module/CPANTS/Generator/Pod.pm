@@ -5,9 +5,6 @@ use Pod::Simple::Checker;
 use base 'Module::CPANTS::Generator';
 use File::Spec::Functions qw(catfile);
 
-use vars qw($VERSION);
-$VERSION = "0.26";
-
 
 ##################################################################
 # Analyse
@@ -47,7 +44,7 @@ __PACKAGE__->kwalitee_definitions
   {
    name=>'no_pod_errors',
    type=>'basic',
-   error=>q{The documentation for this distribution contains syntactic errors in it's POD.},
+   error=>q{The documentation for this distribution contains syntactic errors in its POD.},
    code=>sub { shift->{pod_errors} ? 0 : 1 },
    },
  ]);

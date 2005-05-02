@@ -7,10 +7,6 @@ use File::Path;
 use File::Spec::Functions qw(catdir catfile);
 use File::stat;
 
-use vars qw($VERSION);
-$VERSION = "0.26";
-
-
 ##################################################################
 # Analyse
 ##################################################################
@@ -68,7 +64,7 @@ sub analyse {
     } else {
         $cpants->{metric}{extractable}=0;
         $cpants->abort(1);
-#	print "NOT EXTRACTABLE\n";
+	print "NOT EXTRACTABLE\n";
         return;
     }
     $cpants->{metric}{extractable}=1;

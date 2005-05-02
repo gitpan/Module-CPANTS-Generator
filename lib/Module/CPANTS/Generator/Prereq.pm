@@ -6,9 +6,6 @@ use File::Spec::Functions qw(catfile);
 use YAML qw(:all);
 use Module::MakefilePL::Parse;
 
-use vars qw($VERSION);
-$VERSION = "0.26";
-
 ##################################################################
 # Analyse
 ##################################################################
@@ -61,60 +58,52 @@ sub analyse {
 ##################################################################
 
 
-__PACKAGE__->kwalitee_definitions
-  ([
-    {
-     name=>'is_prereq',
-     type=>'complex',
-     error=>q{This distribution is only required by 2 or less other distributions.},
-     code=>sub {
-	 my $metric=shift;
-	 my $DBH=Module::CPANTS::Generator->DBH;
-	 my $required_by=0;
+__PACKAGE__->kwalitee_definitions([{
+    name=>'is_prereq',
+    type=>'complex',
+    error=>q{This distribution is only required by 2 or less other distributions.},
+    code=>sub {
+        my $metric=shift;
+        my $DBH=Module::CPANTS::Generator->DBH;
+        my $required_by=0;
 
-	 my $modules=$metric->{modules_in_dist};
-	 foreach (@$modules) {
-	     my $module=$_->{module};
-	     $required_by+=$DBH->selectrow_array("select count(distid) from prereq where requires=?",undef,$module);
-	 }
+        my $modules=$metric->{modules_in_dist};
+        foreach (@$modules) {
+            my $module=$_->{module};
+            $required_by+=$DBH->selectrow_array("select count(dist) from prereq where requires=?",undef,$module);
+        }
 
-	 if ($required_by>0) {
-	     $metric->{required_by}=$required_by;
-	     $DBH->do("update dist set required_by=? where dist=?",undef,$required_by,$metric->{dist});
-	 }
+        if ($required_by>0) {
+            $metric->{required_by}=$required_by;
+            $DBH->do("update dist set required_by=? where dist=?",undef,$required_by,$metric->{dist});
+        }
 
-	 if ($required_by>2) {
-	     $DBH->do("update kwalitee set kwalitee=?,is_prereq=1 where distid=?",undef,$metric->{kwalitee}{kwalitee}+1,$metric->{id}) || die "foo $!";
-	     return 1;
-	 }
-	 return 0;
-     },
+        if ($required_by>2) {
+            $DBH->do("update kwalitee set kwalitee=?,is_prereq=1 where dist=?",undef,$metric->{kwalitee}{kwalitee}+1,$metric->{dist}) || die "foo $!";
+            return 1;
+        }
+        return 0;
     },
-   ]);
-
+}]);
 
 ##################################################################
 # DB
 ##################################################################
 
 sub sql_fields_dist {
-    return "   required_by integer,
-";
+    return "    required_by integer,\n";
 }
 
 sub sql_other_tables {
-    return
-[
+    return [
 "create table prereq (
-  id integer primary key,
-  distid integer,
-  requires text,
-  version text
+    id integer primary key,
+    dist text,
+    requires text,
+    version text
 )",
-"CREATE INDEX prereq_distid_idx on prereq (distid)",
-"CREATE INDEX prereq_requires_idx on prereq (requires)
-",
-];
+    "CREATE INDEX prereq_dist_idx on prereq (dist)\n",
+    "CREATE INDEX prereq_requires_idx on prereq (requires)\n",];
 }
 
 

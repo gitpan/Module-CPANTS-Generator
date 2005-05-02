@@ -1,10 +1,45 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 121 $
-# $Date: 2005-03-02 15:24:20 +0100 (Wed, 02 Mar 2005) $ 
+# $Rev: 138 $
+# $Date: 2005-05-02 12:16:03 +0200 (Mon, 02 May 2005) $ 
 #-----------------------------------------------------------------
 
-2005-03-02
+2005-05-01
+----------
+!!! release Module-CPANTS-Generator-0.30 (r139)
+d: make_site corrected
+d: removed distid from db and code
+
+
+2005-04-07
+----------
+* correct type in no_pod_errors shortcoming (thanks to Nicholas Clark)
+
+
+2005-04-04
+----------
+* added author pages
+* added authors dir
+
+
+2005-03-29
+----------
+* added up/down to highscore list
+
+
+2005-03-24
+----------
+* proper highscore listing (ex aequo)
+* dump positions to calculate up/down movement during next run
+
+
+2005-03-03
+----------
+* resolved bug: if number of 'use strict' is bigger than number of modules,
+  no kwalitee for use_strict was awarded. Reported by Christopher H. Laco.
+
+
+2005-03-02      release Module-CPANTS-Generator-0.26
 ----------
 * changed back to selfwritten Makefile.PL parser
 * simplified prereq calculation
@@ -13,12 +48,13 @@
 2005-02-28
 ----------
 * made yaml2sqlite for uses(_in_tests) easier/clearer
-* type on Prereq.pm
-* resolved has_pod_coverage_test bug
+* typo on Prereq.pm
+* resolved has_pod_coverage_test bug reported by Barbie and
+  Sebastien Aperghis-Tramoni ('thanks'x2)
 * corrected a problem with cpants_errors
 
 
-2005-02-23
+2005-02-23      release Module-CPANTS-Generator-0.25
 ----------
 * make_site radically enhanced
 * stuff

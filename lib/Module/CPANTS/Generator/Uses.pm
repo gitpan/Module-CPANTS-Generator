@@ -6,9 +6,6 @@ use File::Spec::Functions qw(catfile);
 use YAML qw(:all);
 use Module::ExtractUse;
 
-use vars qw($VERSION);
-$VERSION = "0.26";
-
 ##################################################################
 # Analyse
 ##################################################################
@@ -59,23 +56,21 @@ sub analyse {
 # Kwalitee Indicators
 ##################################################################
 
-__PACKAGE__->kwalitee_definitions
-  ([
+__PACKAGE__->kwalitee_definitions([
     {
         name=>'use_strict',
         type=>'basic',
         error=>q{This distribution does not use 'strict' in all of its modules.},
         code=>sub {
-            my $metric=shift;
-            my $modules=$metric->{modules} || 0;
-            return 0 unless $modules;
-            my $uses=$metric->{uses};
-            return 0 unless $uses->{strict};
-            return 1 if $uses->{strict} == $modules;
-            return 0;
+                my $metric=shift;
+                my $modules=$metric->{modules} || 0;
+                return 0 unless $modules;
+                my $uses=$metric->{uses};
+                return 0 unless $uses->{strict};
+                return 1 if $uses->{strict} >= $modules;
+                return 0;
+            },
         },
-    },
-
     {
         name=>'has_test_pod',
         type=>'basic',
@@ -129,24 +124,21 @@ sub sql_other_tables {
     return
 [
 "create table uses (
-  id integer primary key,
-  distid integer,
-  module text,
-  count integer
+    id integer primary key,
+    dist text,
+    module text,
+    count integer
 )",
-"CREATE INDEX uses_distid_idx on uses (distid)",
+"CREATE INDEX uses_dist_idx on uses (dist)",
 "CREATE INDEX uses_module_idx on uses (module)",
 "create table uses_in_tests (
-  id integer primary key,
-  distid integer,
-  module text,
-  count integer
+    id integer primary key,
+    dist text,
+    module text,
+    count integer
 )",
-"CREATE INDEX uses_tests_distid_idx on uses (distid)",
+"CREATE INDEX uses_tests_dist_idx on uses (dist)",
 "CREATE INDEX uses_tests_module_idx on uses (module)",
-
-
-
 ];
 }
 

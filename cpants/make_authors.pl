@@ -13,6 +13,8 @@ use lib "$FindBin::Bin/../lib";
 use Module::CPANTS::Generator;
 use DBI;
 use CPANPLUS::Backend;
+use YAML qw(DumpFile);
+use File::Spec::Functions qw(catdir);
 
 print "make_authors.pl\n".('#'x66)."\n";
 
@@ -27,12 +29,12 @@ $cpants->DBH($DBH);
 #-----------------------------------------------------------------
 foreach my $sql((
 "create table authors (
-  id integer primary key,
-  cpanid text,
-  author text,
-  email text,
-  average_kwalitee integer,
-  distcount integer
+    id integer primary key,
+    cpanid text,
+    author text,
+    email text,
+    average_kwalitee integer,
+    distcount integer
 )",
 "CREATE INDEX authors_cpanid_idx on authors (cpanid)",)
 		) {
@@ -45,8 +47,7 @@ foreach my $sql((
 
 my $cp=$cpants->get_cpan_backend;
 
-
-my $sth_avg_kwalitee=$DBH->prepare_cached("select avg(kwalitee.kwalitee),count(dist.author) from kwalitee,dist where dist.id=kwalitee.distid AND dist.author=? group by dist.author");
+my $sth_avg_kwalitee=$DBH->prepare_cached("select avg(kwalitee.kwalitee),count(dist.author) from kwalitee,dist where dist.dist=kwalitee.dist AND dist.author=?");
 my $sth_insert_auth=$DBH->prepare_cached("insert into authors (cpanid,author,email,average_kwalitee,distcount) values (?,?,?,?,?)");
 
 foreach my $author (sort {$a->cpanid cmp $b->cpanid} values %{$cp->author_tree}) {
@@ -60,6 +61,7 @@ foreach my $author (sort {$a->cpanid cmp $b->cpanid} values %{$cp->author_tree})
         $cnt=$avg[1];
     }
     $sth_insert_auth->execute($author->cpanid,$author->author,$author->email,$avg,$cnt);
+
 }
 
 __END__

@@ -45,7 +45,6 @@ while (my $f=readdir(MET)) {
 }
 
 my $cpants_version=$Module::CPANTS::Generator::VERSION;
-my $id=1;
 
 foreach my $f (sort keys %$dists) {
     my $status=$dists->{$f};
@@ -94,9 +93,7 @@ foreach my $f (sort keys %$dists) {
         $errors{$f}=$err;
     }
     
-    $cpants->{metric}{id}=$id;
     $cpants->{metric}{cpants_errors}=$err;
-    $id++;
 
     $cpants->write_metric;
     $cpants->tidytemp;

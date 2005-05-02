@@ -4,8 +4,7 @@ use strict;
 use base 'Module::CPANTS::Generator';
 use CPANPLUS::Backend;
 
-use vars qw($VERSION $cp %packages);
-$VERSION = "0.26";
+use vars qw($cp %packages);
 
 $cp=Module::CPANTS::Generator->get_cpan_backend;
 
