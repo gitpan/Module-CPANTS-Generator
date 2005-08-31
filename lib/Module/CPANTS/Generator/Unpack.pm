@@ -6,6 +6,12 @@ use File::Copy;
 use File::Path;
 use File::Spec::Functions qw(catdir catfile);
 use File::stat;
+use CPAN::DistnameInfo;
+use Archive::Any;
+
+my $testdir=Module::CPANTS::Config->testdir;
+
+sub order { 1 }
 
 ##################################################################
 # Analyse
@@ -13,102 +19,84 @@ use File::stat;
 
 sub analyse {
     my $class=shift;
-    my $cpants=shift;
+    my $dist=shift;
 
-    my $package=$cpants->package;
-    my $temppath=$cpants->temppath;
-    my $di=$cpants->distnameinfo;
-
-#    unless ($cpants->conf->force) {
-	# todo:
-	# read in old file and check 'generated_with'
-	# dont skip if version is newer
-#	if (-e $cpants->metricfile) {
-#	    $cpants->abort(1);
-#	    return;
-#	}
-#    }
-
-    # distinfo
-    my $ext=$di->extension || '';
+    # DistnameInfo
+    my $di=CPAN::DistnameInfo->new($dist->from);
     my ($major,$minor);
     if ($di->version) {
         ($major,$minor)=$di->version=~/^(\d+)\.(.*)/;
     }
-    $major=$di->dist unless defined($major);
-
-    $cpants->{metric}=
-      {
-       dist=>$cpants->dist,
-       package=>$di->filename,
-       extension=>$ext,
-       version=>$di->version,
-       version_major=>$major,
-       version_minor=>$minor,
-       dist_without_version=>$di->dist,
-      };
-
+    $major=0 unless defined($major);
+    my $ext=$di->extension || 'unknown';
+    
+    $dist->dist($di->distvname);
+    $dist->extension($ext);
+    $dist->version($di->version);
+    $dist->version_major($major);
+    $dist->version_minor($minor);
+    $dist->dist_without_version($di->dist);
+    $dist->pauseid($di->cpanid);
+    
     # extract
-    copy(catfile($cpants->distsdir,$package),$cpants->tempdir) || die $!;
-    chdir($cpants->tempdir);
-
-    if ($ext eq 'tar.gz' || $ext eq 'tgz') {
-        system("tar xzf $temppath 2>/dev/null");
-    } elsif ($ext eq 'zip') {
-        system("unzip", "-q", $temppath);
-
-# gz is not supported by CPAN::DistnameInfo
-#    } elsif ($ext eq 'gz') {
-#	system("gzip", "-d", $temppath);
-
-    } else {
-        $cpants->{metric}{extractable}=0;
-        $cpants->abort(1);
-	print "NOT EXTRACTABLE\n";
+    chdir($testdir);
+    my $tarball=$dist->testfile;
+    my $archive=Archive::Any->new($tarball);
+    unless ($ext eq 'tar.gz' || $ext eq 'tgz' || $ext eq 'zip') {
+        $dist->extractable(0);
+        unlink($tarball);
+        print "NOT EXTRACTABLE\n";
         return;
     }
-    $cpants->{metric}{extractable}=1;
+    $dist->extractable(1),
 
+#    if ($ext eq 'tar.gz' || $ext eq 'tgz') {
+#        system("tar xzf $tarball 2>/dev/null") == 0  || warn "cannot unpack: tar xzf $tarball 2>/dev/null";
+#    } elsif ($ext eq 'zip') {
+#        system("unzip", "-q", $tarball) == 0 || warn "cannot unpack: unzip -q $tarball";
+#    } else {
+#        $dist->extractable(0);
+#        unlink($tarball);
+#        print "NOT EXTRACTABLE\n";
+#        return;
+#    }
 
+    
     # size
-    my $size_packed=-s $temppath;
-    $cpants->{metric}{size_packed}=$size_packed;
+    $dist->size_packed(-s $tarball);
+
+    $archive->extract();
 
     # remove tarball
-    unlink($cpants->temppath);
-
+    unlink($tarball);
+    
     # check if package is polite & get release date
     my $extracts_nicely=0;
     my $stat;
-    if (-d catdir($cpants->tempdir,$di->distvname)) {
-        $extracts_nicely=1;
-        $cpants->testdir(catdir($cpants->tempdir,$di->distvname));
-        $stat=stat($cpants->testdir);
-
+    
+    opendir(DIR,".");
+    my @stuff=grep {/\w/} readdir(DIR);
+    if (@stuff == 1) {
+        $extracts_nicely=1 if $di->distvname eq $stuff[0];
+        $dist->testdir(catdir($testdir,$stuff[0]));
+        $stat=stat($dist->testdir);
     } else {
-        opendir(DIR,".");
-        my @stuff=grep {/\w/} readdir(DIR);
-        closedir DIR;
+        my @pm=grep {/\.pm$/} @stuff;
+        my $file=$pm[rand(@pm)];
+        $stat=stat(catfile($testdir,$file));
 
-	# if there is only one thing in this dir, assume it's a dir
-	# else, get a random .pm file and use its mtime
-	if (@stuff==1) {
-	    $cpants->testdir(catdir($cpants->tempdir,$stuff[0]));
-	    $stat=stat($cpants->testdir);
-	} else {
-	    $cpants->testdir($cpants->tempdir);
-
-	    my @pm=grep {/\.pm$/} @stuff;
-	    my $file=$pm[rand(@pm)];
-	    $stat=stat(catfile($cpants->testdir,$file));
-	}
+        mkdir(catdir($testdir,'testing'));
+        move('*','testing') || warn $dist->dist.": Cannot move extracted data to testing: $!";
+        $dist->testdir(catdir($testdir,'testing'));
     }
-    $cpants->{metric}{extracts_nicely}=$extracts_nicely;
-    $cpants->{metric}{released_epoch}=$stat->mtime;
-    $cpants->{metric}{released_date}=localtime($stat->mtime);
-
-    chdir($cpants->testdir);
-    return;
+       
+    $dist->extracts_nicely($extracts_nicely);
+    $dist->released_epoch(scalar $stat->mtime);
+    $dist->released_date(scalar localtime($stat->mtime));
+    $dist->update; 
+    
+    chdir($dist->testdir);
+    return 1;
 }
 
 
@@ -116,71 +104,81 @@ sub analyse {
 # Kwalitee Indicators
 ##################################################################
 
-
-__PACKAGE__->kwalitee_definitions
-  ([
-    {
-     name=>'extractable',
-     type=>'basic',
-     error=>q{This package uses an unknown packaging format. CPANTS can handle tar.gz, tgz and zip archives. No kwalitee metrics have been calculated.},
-     code=>sub { shift->{extractable} ? 1 : -1 },
-    },
-    {
-     name=>'extracts_nicely',
-     type=>'basic',
-     error=>q{This package doesn't create a directory and extracts its content into this directory. Instead, it spews its content into the current directory, making it really hard/annoying to remove the unpacked package.},
-     code=>sub { shift->{extracts_nicely} ? 1 : 0},
-    },
-    {
-     name=>'has_version',
-     type=>'basic',
-     error=>"The package filename (eg. Foo-Bar-1.42.tar.gz) does not include a version number (or something that looks like a reasonable version number to CPAN::DistnameInfo)",
-     code=>sub { shift->{version} ? 1 : 0 }
-    },
-    {
-     name=>'has_proper_version',
-     type=>'basic',
-     error=>"The version number isn't a number. It probably contains letter, which it shouldn't",
-     code=>sub { my $v=shift->{version};
+sub kwalitee_indicators {
+    return [
+        {
+            name=>'extractable',
+            type=>'basic',
+            error=>q{This package uses an unknown packaging format. CPANTS can handle tar.gz, tgz and zip archives. No kwalitee metrics have been calculated.},
+            code=>sub { shift->extractable ? 1 : -100 },
+        },
+        {
+            name=>'extracts_nicely',
+            type=>'basic',
+            error=>q{This package doesn't create a directory and extracts its content into this directory. Instead, it spews its content into the current directory, making it really hard/annoying to remove the unpacked package.},
+            code=>sub { shift->extracts_nicely ? 1 : 0},
+        },
+        {
+            name=>'has_version',
+            type=>'basic',
+            error=>"The package filename (eg. Foo-Bar-1.42.tar.gz) does not include a version number (or something that looks like a reasonable version number to CPAN::DistnameInfo)",
+            code=>sub { shift->version ? 1 : 0 }
+        },
+        {
+            name=>'has_proper_version',
+            type=>'basic',
+            error=>"The version number isn't a number. It probably contains letter, which it shouldn't",
+            code=>sub { my $v=shift->version;
                  return 0 unless $v;
                  return 1 if ($v=~/^[\d\.]+$/);
                  return 0;
- }
-    },
+            }
+        },
+        {
+            name=>'no_cpants_errors',
+            type=>'basic',
+            error=>"There where problems during CPANTS testing. Those problems are either caused by some very strange behaviour of this distribution or a bug in CPANTS.",
+            code=>sub { shift->cpants_errors ? 0 : 1 }
+        },
+    ];
+}
 
-    
-    {
-     name=>'no_cpants_errors',
-     type=>'basic',
-     error=>"There where problems during CPANTS testing. Those problems are either caused by some very strange behaviour of this distribution or a bug in CPANTS. ",
-     code=>sub { shift->{cpants_errors} ? 0 : 1 }
-    }
-
-
-   ]);
-
-
+   
 ##################################################################
 # DB
 ##################################################################
 
-sub sql_fields_dist {
-    return "   dist text,
-   package text,
-   dist_without_version text,
-   version text,
-   version_major text,
-   version_minor text,
-   extension text,
-   extractable integer,
-   extracts_nicely integer,
-   size_packed integer,
-   size_unpacked integer,
-   released_epoch text,
-   released_date text,
-   cpants_errors text,
-   ";
+sub schema {
+    return {
+        version=>['cpants text','db text'],
+        dist=>[
+            'id INTEGER PRIMARY KEY',
+            'kwalitee integer',
+            'generated_at text',
+            'generated_with text',
+            'dist text',
+            'package text',
+            'dist_without_version text',
+            'version text',
+            'version_major text',
+            'version_minor text',
+            'extension text',
+            'extractable integer not null default 0',
+            'extracts_nicely integer not null default 0',
+            'size_packed integer',
+            'size_unpacked integer',
+            'released_epoch text',
+            'released_date text',
+            'cpants_errors text',
+        ],
+        index=>[
+            'create unique index dist_id on dist(id)',
+            'create unique index dist_wv on dist(dist_without_version)',
+            'create unique index dist_dist on dist(dist)',
+        ],
+    };
 }
+
 
 1;
 __END__

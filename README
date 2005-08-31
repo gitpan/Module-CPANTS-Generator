@@ -4,13 +4,10 @@ NAME
 DESCRIPTION
     This module is part of the beta CPANTS project. It consists of many
     modules that unpack CPAN, gather meta information about it and create
-    the Module::CPANTS distribution. You only need this if you want to add
-    more metrics to Module::CPANTS.
-
-    Please note that CPAN::DistnameInfo Version 0.04 is needed, which is not
-    released yet. You can get it from here:
-    http://svn.mutatus.co.uk/browse/CPAN-DistnameInfo/trunk/
+    the SQLite DB available from http://cpants.dev.zsi.at
     
+    You only need this distribution if you want to add
+    more metrics to Module::CPANTS.
 
 AUTHOR
     Thomas Klausner, <domm@zsi.at>

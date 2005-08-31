@@ -1,10 +1,11 @@
 package Module::CPANTS::Generator::Prereq;
 use warnings;
 use strict;
-use base 'Module::CPANTS::Generator';
 use File::Spec::Functions qw(catfile);
 use YAML qw(:all);
-use Module::MakefilePL::Parse;
+
+
+sub order { 100 }
 
 ##################################################################
 # Analyse
@@ -12,9 +13,10 @@ use Module::MakefilePL::Parse;
 
 sub analyse {
     my $class=shift;
-    my $cpants=shift;
-    my $files=$cpants->files;
-    my $testdir=$cpants->testdir;
+    my $dist=shift;
+    
+    my $files=$dist->files_array;
+    my $testdir=$dist->testdir;
 
     my $prereq;
     if (grep {/^META\.yml$/} @$files) {
@@ -29,14 +31,14 @@ sub analyse {
             }
         }
     } elsif (grep {/^Build\.PL$/} @$files) {
-        open(IN,catfile($cpants->testdir,'Build.PL')) || return;
+        open(IN,catfile($testdir,'Build.PL')) || return 1;
         my $m=join '', <IN>;
         close IN;
         my($requires) = $m =~ /requires.*?=>.*?\{(.*?)\}/s;
         eval "{ no strict; \$prereq = { $requires \n} }";
         
     } else {
-        open(IN,catfile($cpants->testdir,'Makefile.PL')) || return;
+        open(IN,catfile($testdir,'Makefile.PL')) || return 1;
         my $m=join '', <IN>;
         close IN;
 
@@ -44,66 +46,66 @@ sub analyse {
         $requires||='';
         eval "{ no strict; \$prereq = { $requires \n} }";
     }
-
+    
     return unless $prereq;
-    foreach my $ver (values %$prereq) {
-        $ver||=0;
-        $ver=0 unless $ver=~/[\d\._]+/;
+    if (!ref $prereq) {
+        my $p={$prereq=>0};
+        $prereq=$p;
     }
-    $cpants->{metric}{prereq}=$prereq;
+    while (my($requires,$version)=each%$prereq) {
+        $version||=0;
+        $version=0 unless $version=~/[\d\._]+/;
+        $dist->add_to_prereqs({
+            requires=>$requires,
+            version=>$version,
+        });
+    }
+    return 1;
 }
 
 ##################################################################
 # Kwalitee Indicators
 ##################################################################
 
-
-__PACKAGE__->kwalitee_definitions([{
-    name=>'is_prereq',
-    type=>'complex',
-    error=>q{This distribution is only required by 2 or less other distributions.},
-    code=>sub {
-        my $metric=shift;
-        my $DBH=Module::CPANTS::Generator->DBH;
-        my $required_by=0;
-
-        my $modules=$metric->{modules_in_dist};
-        foreach (@$modules) {
-            my $module=$_->{module};
-            $required_by+=$DBH->selectrow_array("select count(dist) from prereq where requires=?",undef,$module);
-        }
-
-        if ($required_by>0) {
-            $metric->{required_by}=$required_by;
-            $DBH->do("update dist set required_by=? where dist=?",undef,$required_by,$metric->{dist});
-        }
-
-        if ($required_by>2) {
-            $DBH->do("update kwalitee set kwalitee=?,is_prereq=1 where dist=?",undef,$metric->{kwalitee}{kwalitee}+1,$metric->{dist}) || die "foo $!";
-            return 1;
-        }
-        return 0;
-    },
-}]);
+sub kwalitee_indicators{
+    return [
+        {
+            name=>'is_prereq',
+            error=>q{This distribution is not required by another distribution by another author.},
+            code=>sub {
+                my $dist=shift;
+                my $pauseid=$dist->author->pauseid;
+                my $it=Module::CPANTS::DB::Dist->search_required_by_otherauthor(
+                    $dist->id,$pauseid
+                );
+                my $required=$it->count;
+                return 1 if $required;
+            },
+        },
+    ];
+}
 
 ##################################################################
 # DB
 ##################################################################
 
-sub sql_fields_dist {
-    return "    required_by integer,\n";
-}
+sub schema {
+    return {
+        prereq=>[
+            'id integer primary key',
+            'dist integer not null default 0',
+            'requires text',
+            'version text',
+            'in_dist integer not null default 0',
+        ],
+        index=>[
+            'create index prereq_id on prereq(id)',
+            'create index prereq_dist on prereq(dist)',
+            'create index prereq_requires on prereq(requires)',
+            'create index prereq_in_dist on prereq(in_dist)',
 
-sub sql_other_tables {
-    return [
-"create table prereq (
-    id integer primary key,
-    dist text,
-    requires text,
-    version text
-)",
-    "CREATE INDEX prereq_dist_idx on prereq (dist)\n",
-    "CREATE INDEX prereq_requires_idx on prereq (requires)\n",];
+        ],
+    }
 }
 
 

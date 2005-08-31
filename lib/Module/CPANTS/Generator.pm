@@ -3,353 +3,205 @@ use strict;
 use warnings;
 use Carp;
 use Cwd;
-use Storable;
 use Data::Dumper;
-use base qw(Class::Accessor Class::Data::Inheritable);
+use base qw(Class::Accessor);
 
-use YAML qw(:all);
-
+use Parse::CPAN::Packages;
+use File::Spec::Functions qw(catdir catfile);
+use Module::Pluggable search_path=>['Module::CPANTS::Generator'];
 use File::Copy;
 use File::Path;
-use File::Spec::Functions qw(catdir catfile);
-use CPAN::DistnameInfo;
-use AppConfig qw(:expand :argcount);
-use FindBin;
-
-use DateTime;
+use IO::Capture::Stderr;
+use Module::CPANTS::Config;
 
 use vars qw($VERSION);
-$VERSION = "0.30";
+$VERSION = "0.40";
 
 
 ##################################################################
-# SETUP - AUTOMATIC
+# SETUP - on load
 ##################################################################
 
-
-#-----------------------------------------------------------------
-# set up classdata and accessors
-#-----------------------------------------------------------------
-my $class=__PACKAGE__;
-
-foreach (qw(DBH tempdir distsdir testdir metricdir conf available_generators kwalitee_definitions cpan_backend)) {
-    $class->mk_classdata($_);
-}
-
-$class->mk_accessors
-  (qw(package dist temppath distnameinfo metricfile abort files dirs));
-
-
-#-----------------------------------------------------------------
-# parse command line options
-#-----------------------------------------------------------------
-{
-    my $config=AppConfig->new();
-    $config->define
-      (qw(force no_authors print_distname quiet),
-       qw(limit=s),
-       'tempdir=s'=>{DEFAULT=>'temp'},
-       'distsdir=s'=>{DEFAULT=>'dists'},
-       'metricdir=s'=>{DEFAULT=>'metrics'},
-       'cpan=s'=>{DEFAULT=>'/home/minicpan/'},
-       'generators=@'=>{DEFAULT=>[qw(Unpack Files FindModules Pod Prereq CPAN Uses)]}
-      );
-    $config->args;
-    $class->conf($config);
-}
-
-##################################################################
-# SETUP - HAS TO BE CALLED EXPLICTLY
-##################################################################
-
-#-----------------------------------------------------------------
-# set up various directories
-#-----------------------------------------------------------------
-sub setup_dirs {
-    my $base=$FindBin::Bin;
-
-    $class->distsdir(catdir($base,$class->conf->distsdir));
-    croak("I cannot do my work without a distsdir") unless (-e $class->distsdir);
-
-    $class->metricdir(catdir($base,$class->conf->metricdir));
-    if (!-e $class->metricdir) {
-        mkdir($class->metricdir) || croak "cannot make metricdir: ".$class->metricdir.": $!";
-    }
-
-    $class->tempdir(catdir($base,$class->conf->tempdir));
-    if (!-e $class->tempdir) {
-        mkdir($class->tempdir) || croak "cannot make tempdir: ".$class->tempdir.": $!";
-    }
-}
-
-
-#-----------------------------------------------------------------
-# cpanplus
-#-----------------------------------------------------------------
-sub get_cpan_backend {
-    my $self=shift;
-
-    if ($self->cpan_backend) {
-        return $self->cpan_backend;
-    }
-
-    my $cp;
-    my $local_cpan=$self->conf->cpan;
-    use CPANPLUS::Backend; 
-    eval {
-        $cp=CPANPLUS::Backend->new(
-            conf => {verbose => 0, debug => 0,
-            hosts=>[{
-                scheme => 'file',
-                path   => $local_cpan,
-            }],
-        });
-    };
-    die $@ if $@;
-
-    $self->cpan_backend($cp);
-
-    return $cp;
-}
-
-
-
-##################################################################
-# Instance Methods
-##################################################################
-
-sub new {
-    my $class=shift;
-    my $package=shift;
-    my $temppath=catfile($class->tempdir,$package);
-
-    my $self=bless {
-        package=>$package,
-        temppath=>$temppath,
-    },$class;
-
-    my $di=CPAN::DistnameInfo->new($package);
-    $self->distnameinfo($di);
-    $self->dist($di->distvname || $package);
-
-    $self->metricfile(catfile($class->metricdir,$self->dist.'.yml'));
-
-    return $self;
-}
-
-
-#-----------------------------------------------------------------
-# write_metric
-#-----------------------------------------------------------------
-sub write_metric {
-    my $proto=shift;
-    my ($metric,$file);
-    if (ref($proto)) {
-        $file=$proto->metricfile;
-        $metric=$proto->{metric};
-    } else {
-        $metric=shift;
-        die "No metric\n",caller(),"\n" unless $metric;
-        unless ($metric->{dist}) {
-            use Data::Dumper;
-            print Dumper($metric,$proto);
-            die "no metirc $metric ".shift;
-        }
-        $file=catfile($proto->metricdir, $metric->{dist}.'.yml');
-    }
-
-    $metric->{generated_at}=DateTime->now->datetime;
-    $metric->{generated_with}="Module::CPANTS::Generator ".$VERSION;
-
-    open(OUT,">$file") || croak("Cannot write metrics to $file: $!");
-    print OUT Dump($metric);
-    close OUT;
-}
-
+__PACKAGE__->mk_accessors(qw(quiet generators config opts));
 
 
 ##################################################################
 # Class Methods
 ##################################################################
 
-sub tidytemp {
-    my $self=shift;
-    rmtree($self->tempdir) || die "ERROR $!";
-    mkdir($class->tempdir) || die "ERROR $!";
-    return;
-}
-
-sub load_generators {
-    my $self=shift;
-    my $generators=$self->conf->generators;
-
-    {
-        no strict 'refs';
-        foreach my $gen (@$generators) {
-            $gen="Module::CPANTS::Generator::$gen";
-            eval "require $gen";
-            croak "cannot load $gen\n$@" if $@;
-        }
+sub new {
+    my $class=shift;
+    my $opts=shift || {};
+    
+    my $cpants=bless {},$class;
+    $cpants->config(Module::CPANTS::Config->new());
+    $cpants->opts($opts);
+    
+    my %generators;
+    foreach my $gen ($cpants->plugins) {
+        eval "require $gen";
+        croak "cannot load $gen: $@" if $@;
+        $generators{$gen}=$gen->order;
+        
     }
-
-    $self->available_generators($generators);
-    return;
+    my @generators=sort { $generators{$a} <=> $generators{$b} } keys %generators;
+    $cpants->generators(\@generators);
+    return $cpants;
 }
 
-
-
-sub kwalitee_indicators {
-    my $class=shift;
-    my @kwalitee_indicators;
-    foreach my $generator (@{$class->available_generators}) {
-        next unless $generator->kwalitee_definitions;
-        foreach my $kw (@{$generator->kwalitee_definitions}) {
-            $kw->{defined_in}=$generator;
-            push(@kwalitee_indicators,$kw);
-        }
+my $cnt=1;
+sub analyse_cpan {
+    my $self=shift;
+    
+    my $limit=$self->opts->{'limit'} || 0;
+    print "parsing packages info...\n";
+    my $p=Parse::CPAN::Packages->new($self->config->minicpan_02packages($self));
+    
+    my %seen;
+    my $all=Module::CPANTS::DB::Dist->retrieve_all;
+    while (my $d=$all->next) {
+        $seen{$d->package}++;
     }
-    return \@kwalitee_indicators;
-}
+    my $now=localtime;
+    
+    foreach my $dist (sort {$a->dist cmp $b->dist} $p->latest_distributions) {
+        my $package=$dist->filename;
+        if ($package=~m|/|) {
+            $package=~s|^.*/||;
+        }
 
+        next if $seen{$package};
+        next if $package=~/^perl[-\d]/;
+        next if $package=~/^ponie-/;
+        next if $package=~/^parrot-/;
+        next if $package=~/^Bundle-/;
+ 
+        my $capture=IO::Capture::Stderr->new();
+        $capture->start;
+   
+        my $from=$self->config->minicpan_path_to_dist($dist->prefix);
+        my $to=catfile($self->config->testdir,$package);
 
-sub total_kwalitee {
-    my $class=shift;
-    my $ind=$class->kwalitee_indicators;
-    return scalar @$ind;
-}
-
-sub determine_kwalitee {
-    my $class=shift;
-    my $type=shift;
-    my $metric=shift;
-
-    my $indicators=$class->kwalitee_indicators;
-
-    foreach my $ind (@$indicators) {
-        next unless $ind->{type} eq $type;
-        my $code=$ind->{code};
-        my $name=$ind->{name};
-        my $rv=&$code($metric) || 0;
-
-        if ($rv == -1) {
-            $metric->{kwalitee}={kwalitee=>0};
-            foreach (@$indicators) {
-                $metric->{kwalitee}{$name}=0;
-            }
-            last;
-        } elsif ($rv) {
-            $metric->{kwalitee}{$name}=1;
-            $metric->{kwalitee}{kwalitee}+=1;
+        if (-e $from) {
+            print "$package\n" unless $self->quiet;
+            copy ($from,$to) || warn "cannot copy $from to $to: $!";
         } else {
-            $metric->{kwalitee}{$name}=0;
+            warn "missing in mirror: $package\n" unless $self->quiet;
+            next;
+        }
+        
+        my $dist=Module::CPANTS::DB::Dist->create({
+            package=>$package,
+            generated_at=>$now,
+            generated_with=>$VERSION,
+            testfile=>$to,
+            from=>$from
+        });
+        
+        foreach my $gen (@{$self->generators}) {
+            last unless $gen->analyse($dist);
+        }
+        
+        eval {$dist->update};
+        warn $@ if $@;
+        
+        # remove testing dir
+        #   it's easier to delete the whole thing, as certain dist
+        #   put their content everywhere...
+        rmtree($self->config->testdir);
+        
+        # create new testing dir for next test
+        mkdir($self->config->testdir);
+        
+        $capture->stop;
+        my @errors=$capture->read;
+        if (@errors) {
+            $dist->cpants_errors(join("\n",@errors));
+            print "ERROR: ",@errors,"\n";
+            $dist->update;
+        }
+        
+        if ($limit) {
+            $cnt++;
+            last if $cnt>$limit;
         }
     }
-    return;
 }
 
 
-
-sub yaml2db {
-    my $class=shift;
-    my $metric=shift;
-    my $DBH=$class->DBH;
-    my $dist=$metric->{dist};
-    my (@keys,@vals);
-
-    while (my ($k,$v)=each %$metric) {
-        my $ref=ref($v);
-        if (!$ref || $ref eq 'STRING') {
-            push(@keys,$k);
-            push(@vals,$v);
-        } elsif ($ref eq 'ARRAY') {
-            # might be list to stringify or data for another table
-            my $first=$v->[0];
-            next unless $first;
-            if (ref($first) eq 'HASH') {
-                foreach my $sv (@$v) {
-                    my @columns=('dist');
-                    my @data=($dist);
-                    foreach my $sk (keys %$sv) {
-                        push(@columns,$sk);
-                        my $val=$sv->{$sk};
-                        push(@data,$val);
-                    }
-                    $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
-                }
-            } else {
-                push(@keys,$k);
-                push(@vals,join(',',@$v));
-            }
-        } elsif ($ref eq 'HASH') {
-            if ($k eq 'uses_in_tests' || $k eq 'uses') {
-                while (my($mod,$cnt)=each%$v) {
-                    $DBH->do("insert into $k (dist,module,count) values (?,?,?)",undef,$dist,$mod,$cnt || 0);
-                }
-            } elsif ($k eq 'prereq') {
-                while (my($req,$ver)=each%$v) {
-                    $DBH->do("insert into $k (dist,requires,version) values (?,?,?)",undef,$dist,$req,$ver);
-                }
-            } else {
-                my @columns=('dist');
-                my @data=($dist);
-                foreach my $sk (keys %$v) {
-                    push(@columns,$sk);
-                    my $val=$v->{$sk};
-                    $val=join(',',@$val) if (ref($val) eq 'ARRAY');
-                    push(@data,$val);
-                }
-                $DBH->do("insert into $k (".join(',',@columns).") values (".join(',',map{"'$_'"}@data).")");
-            }
-        }
-    }
-    # insert into dist
-    $DBH->do("insert into dist (".join(',',@keys).") values (".join(',',map{'?'}@vals).")",undef,@vals);
-
-    $class->write_metric($metric);
-    return;
-}
-
-sub get_db_schema {
+sub calc_kwalitee {
     my $self=shift;
-    my $flds;
-    my @tables;
-    foreach my $generator (@{$self->available_generators}) {
-        $flds.=$generator->sql_fields_dist if $generator->can('sql_fields_dist');
-        push(@tables,@{$generator->sql_other_tables}) if $generator->can('sql_other_tables');
+
+    # build up kwalitee generators
+    my @indicators=$self->get_indicators;
+
+    my $all=Module::CPANTS::DB::Dist->retrieve_all;
+    while (my $dist=$all->next) {
+        #next if $dist->kwalitee;
+        
+        my $kwalitee=0;
+        my %k;
+        foreach my $ind (@indicators) {
+            my $rv=$ind->{code}($dist);
+            $k{$ind->{name}}=$rv;
+            $kwalitee+=$rv;
+        }
+        $k{'kwalitee'}=$kwalitee;
+        $dist->kwalitee(Module::CPANTS::DB::Kwalitee->create(\%k));
+        $dist->update;
+        print "$kwalitee\t".$dist->dist."\n";
     }
-    # cleanup flds
-    $flds=~s/,\s+$//;
-
-    unshift(@tables,"
-create table dist (
-    generated_at text,
-    generated_with text,
-$flds
-)");
-
-    my @sql_kw="
-create table kwalitee (
-   dist text primary key,
-   kwalitee integer";
-
-    foreach my $kw (@{$self->kwalitee_indicators}) {
-        push(@sql_kw,"    ".$kw->{name}." integer");
-    }
-    push(@tables,join(",\n",@sql_kw)."\n)");
-    push(@tables,"CREATE INDEX kwalitee_kwalitee_idx on kwalitee (kwalitee)");
-
-    return \@tables;
 }
 
-
-sub read_yaml {
-    my $class=shift;
-    my $file=shift;
-    my $node;
-    eval {$node=LoadFile($file)};
-    return $node;
+sub get_indicators {
+    my $self=shift;
+    
+    my @indicators;
+    foreach my $gen (@{$self->generators}) {
+        foreach my $ind (@{$gen->kwalitee_indicators}) {
+            $ind->{defined_in}=$gen;
+            push(@indicators,$ind); 
+        }
+    }
+    return wantarray ? @indicators : \@indicators;
 }
 
+sub get_schema {
+    my $self=shift;
+
+    my %schema=(
+        kwalitee=>['id INTEGER PRIMARY KEY','kwalitee integer not null default 0'],
+    );
+    foreach my $gen (@{$self->generators}) {
+        my $gen_schema=$gen->schema;
+        foreach my $table (keys %$gen_schema) {
+            $schema{$table}=[] unless $schema{$table};
+            push(@{$schema{$table}},@{$gen_schema->{$table}});
+        }
+
+        my $kwind=$gen->kwalitee_indicators;
+        foreach my $ind (@$kwind) {
+            push(@{$schema{'kwalitee'}},$ind->{'name'}." integer not null default 0");       
+        }
+    }
+    return \%schema;
+}
+
+sub get_schema_text {
+    my $self=shift;
+    my $schema=$self->get_schema;
+    my $indices=$schema->{'index'};
+    delete $schema->{'index'};
+
+    my $dump;
+    while (my($table,$columns)=each%$schema) {
+       $dump.="create table $table (\n".join(",\n",map {"   $_"}@$columns)."\n);\n\n";
+    }
+    foreach (@$indices) {
+        $dump.="$_;\n";
+    }
+    return $dump;
+}
 
 1;
 

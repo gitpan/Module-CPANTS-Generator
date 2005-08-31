@@ -1,6 +1,6 @@
 ---
 name: Module-CPANTS-Generator
-version: 0.30
+version: 0.40
 author:
   - Thomas Klausner <domm@zsi.at> http://domm.zsi.at
   - |-
@@ -9,27 +9,42 @@ author:
 abstract: Generate CPANTS statistics
 license: perl
 requires:
-  AppConfig: 1.56
+  Archive::Any: 0.06
   CPAN::DistnameInfo: 0.05
   CPANPLUS: 0.053
   Class::Accessor: 0.19
-  Class::Data::Inheritable: 0.02
+  Class::DBI: 0.96
+  Class::DBI::Pager: 0.05
   DBD::SQLite: 0.31
   DBI: 1.42
-  DateTime: 0.21
+  IO::Capture: 0.03
   Module::ExtractUse: 0.15
-  Pod::Simple::Checker: 2.02
-  Pod::Strip: 1.00
-  Storable: 2.09
-  Term::ProgressBar: 1.18
-  Test::More: 0.01
-  YAML: 0.35
+  Module::Pluggable: 2.8
+  Parse::CPAN::Packages: 2.24
+  Pod::Simple: 3.02
+  YAML: 0.36
 provides:
+  Module::CPANTS::Config:
+    file: lib/Module/CPANTS/Config.pm
+  Module::CPANTS::DB:
+    file: lib/Module/CPANTS/DB.pm
+  Module::CPANTS::DB::Author:
+    file: lib/Module/CPANTS/DB.pm
+  Module::CPANTS::DB::Dist:
+    file: lib/Module/CPANTS/DB.pm
+  Module::CPANTS::DB::Kwalitee:
+    file: lib/Module/CPANTS/DB.pm
+  Module::CPANTS::DB::Modules:
+    file: lib/Module/CPANTS/DB.pm
+  Module::CPANTS::DB::Prereq:
+    file: lib/Module/CPANTS/DB.pm
+  Module::CPANTS::DB::Uses:
+    file: lib/Module/CPANTS/DB.pm
   Module::CPANTS::Generator:
     file: lib/Module/CPANTS/Generator.pm
-    version: 0.30
-  Module::CPANTS::Generator::CPAN:
-    file: lib/Module/CPANTS/Generator/CPAN.pm
+    version: 0.40
+  Module::CPANTS::Generator::Authors:
+    file: lib/Module/CPANTS/Generator/Authors.pm
   Module::CPANTS::Generator::Files:
     file: lib/Module/CPANTS/Generator/Files.pm
   Module::CPANTS::Generator::FindModules:
@@ -42,6 +57,4 @@ provides:
     file: lib/Module/CPANTS/Generator/Unpack.pm
   Module::CPANTS::Generator::Uses:
     file: lib/Module/CPANTS/Generator/Uses.pm
-  text:
-    file: lib/Module/CPANTS/Generator/Unpack.pm
 generated_by: Module::Build version 0.2609

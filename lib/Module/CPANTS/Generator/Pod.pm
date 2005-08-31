@@ -2,9 +2,10 @@ package Module::CPANTS::Generator::Pod;
 use warnings;
 use strict;
 use Pod::Simple::Checker;
-use base 'Module::CPANTS::Generator';
 use File::Spec::Functions qw(catfile);
 
+
+sub order { 100 }
 
 ##################################################################
 # Analyse
@@ -12,25 +13,26 @@ use File::Spec::Functions qw(catfile);
 
 sub analyse {
     my $class=shift;
-    my $cpants=shift;
-    my $files=$cpants->files;
-    my $testdir=$cpants->testdir;
+    my $dist=shift;
+    
+    my $files=$dist->files_array;
+    my $testdir=$dist->testdir;
 
     my $pod_errors=0;
     foreach my $file (@$files) {
-	next unless $file=~/\.p(m|od)$/;
+        next unless $file=~/\.p(m|od)$/;
 
-	eval {
-	    # Count the number of POD errors
-	    my $parser=Pod::Simple::Checker->new;
-	    my $errata;
-	    $parser->output_string(\$errata);
-	    $parser->parse_file(catfile($testdir,$file));
-	    my $errors=()=$errata=~/Around line /g;
-	    $pod_errors+=$errors;
-	}
+        eval {
+            # Count the number of POD errors
+            my $parser=Pod::Simple::Checker->new;
+            my $errata;
+            $parser->output_string(\$errata);
+            $parser->parse_file(catfile($testdir,$file));
+            my $errors=()=$errata=~/Around line /g;
+            $pod_errors+=$errors;
+        }
     }
-    $cpants->{metric}{pod_errors}=$pod_errors;
+    $dist->pod_errors($pod_errors);
 }
 
 
@@ -38,25 +40,25 @@ sub analyse {
 # Kwalitee Indicators
 ##################################################################
 
-
-__PACKAGE__->kwalitee_definitions
-([
-  {
-   name=>'no_pod_errors',
-   type=>'basic',
-   error=>q{The documentation for this distribution contains syntactic errors in its POD.},
-   code=>sub { shift->{pod_errors} ? 0 : 1 },
-   },
- ]);
+sub kwalitee_indicators {
+    return [
+        {
+            name=>'no_pod_errors',
+            error=>q{The documentation for this distribution contains syntactic errors in its POD.},
+            code=>sub { shift->pod_errors ? 0 : 1 },
+        },
+    ];
+}
 
 
 ##################################################################
 # DB
 ##################################################################
 
-sub sql_fields_dist {
-    return "   pod_errors integer,
-"
+sub schema {
+    return {
+        dist=>['pod_errors integer'],
+    };
 }
 
 1;

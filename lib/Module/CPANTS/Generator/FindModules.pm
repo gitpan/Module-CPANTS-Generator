@@ -1,8 +1,8 @@
 package Module::CPANTS::Generator::FindModules;
 use warnings;
 use strict;
-use base 'Module::CPANTS::Generator';
 
+sub order { 30 }
 
 ##################################################################
 # Analyse
@@ -10,51 +10,62 @@ use base 'Module::CPANTS::Generator';
 
 sub analyse {
     my $class=shift;
-    my $cpants=shift;
-    my $testdir=$cpants->testdir;
-
-    my $files=$cpants->files();
-    my $dirs=$cpants->dirs();
-
-    my @modules;
-    my @module_files;
-
-    my @modules_basedir=grep {/^[^\/]+\.pm$/} @$files;
-    $cpants->{metric}{modules_in_basedir}=scalar @modules_basedir;
+    my $dist=shift;
     
+    my $files=$dist->files_array;
+    
+    my @modules_basedir=grep {/^[^\/]+\.pm$/} @$files;
     if (@modules_basedir) {
-        #$cpants->{metric}{modules_raw}{list_basedir}=\@modules_basedir;
-        push(@module_files,@modules_basedir);
-        $cpants->distnameinfo->dist=~/^(.*)-\w+/i;
-        my $module_name=$1 || "UNKNOWN";
-        $module_name=~s/-/::/g;
-        foreach (@modules_basedir) {
-            s/\.pm$//;
-            push(@modules,$module_name."::".$_);
+        my $namespace=$dist->dist_without_version || 'unkown';
+        $namespace=~s/-[^-]+$//;
+        $namespace=~s/-/::/g;
+        foreach my $file (@modules_basedir) {
+            my $module=$namespace."::".$file;
+            $module=~s/\.pm$//;
+            $dist->add_to_modules({
+                module=>$module,
+                file=>$file,
+                in_basedir=>1,
+                in_lib=>0,
+            });
         }
     }
 
-    if ($cpants->{metric}{dir_lib}) {
+    if ($dist->dir_lib == 1) {
         my @modules_path;
-        my $cnt=0;
-        foreach (@$files) {
-            next unless m|^lib/(.*)\.pm$|;
-            push(@module_files,$_);
-            my $raw=$1;
-            $raw=~s|/|::|g;
-            push(@modules,$raw);
-            $cnt++;
+        foreach my $file (@$files) {
+            next unless $file=~m|^lib/(.*)\.pm$|;
+            my $module=$1;
+            $module=~s|/|::|g;
+            $dist->add_to_modules({
+                module=>$module,
+                file=>$file,
+                in_basedir=>0,
+                in_lib=>1,
+            });
         }
-        $cpants->{metric}{modules_in_lib}=$cnt;
     }
 
-    $cpants->{metric}{modules_list}=\@module_files;
-    $cpants->{metric}{modules}=scalar @module_files;
-
-    my @mods_in_dist=map {{module=>$_}} @modules;
-    $cpants->{metric}{modules_in_dist}=\@mods_in_dist;
-
-    return;
+    if (!@modules_basedir && !$dist->dir_lib) {
+        my @modules_path;
+        foreach my $file (@$files) {
+            next unless $file=~/\.pm$/;
+            next if $file=~m{/t/};
+            next if $file=~m{/test/};
+            $file=~m|(.*)\.pm$|;
+            my $module=$1;
+            $module=~s|/|::|g;
+            $dist->add_to_modules({
+                module=>$module,
+                file=>$file,
+                in_basedir=>0,
+                in_lib=>0,
+            });
+        }
+    }
+    
+    $dist->update;
+    return 1;
 }
 
 
@@ -63,41 +74,48 @@ sub analyse {
 # Kwalitee Indicators
 ##################################################################
 
+sub kwalitee_indicators {
+    return [
+        {
+            name=>'proper_libs',
+            error=>q{There is more than one .pm file in the base dir, or the .pm files are not in directoy lib.},
+            code=>sub { 
+                my $dist=shift;
+                my @modules=$dist->modules;
+                return 0 unless @modules;
 
-__PACKAGE__->kwalitee_definitions([{
-    name=>'proper_libs',
-    type=>'basic',
-    error=>q{There is more than one .pm file in the base dir, or the .pm files are not in directoy lib.},
-    code=>sub { 
-        my $m=shift;
-        return 1 if $m->{modules_in_basedir}==0 && $m->{dir_lib};
-        return 1 if $m->{modules_in_basedir}==1;
-        return 0;
-    },
-}]);
+                my @in_basedir=grep { $_->file !~ m|/| } @modules;
+                return 1 if $dist->dir_lib && @in_basedir == 0;
+                return 1 if @in_basedir == 1;
+                return 0;
+            },
+        },
+    ];
+}
 
 ##################################################################
 # DB
 ##################################################################
 
-sub sql_fields_dist {
-    return 
-"   modules integer,
-   modules_list text,
-   modules_in_lib integer,
-   modules_in_basedir integer,
-";
-}
 
-sub sql_other_tables {
-    return ["
-create table modules_in_dist (
-    id integer primary key,
-    dist text,
-    module text
-)",
-    "CREATE INDEX mid_dist_idx on modules_in_dist (dist)\n"];
+sub schema {
+    return {
+        modules=>[
+            'id INTEGER PRIMARY KEY',,
+            'dist integer not null default 0',
+            'module text',
+            'file text',
+            'in_lib integer not null default 0',
+            'in_basedir integer not null default 0',
+        ],
+        index=>[
+            "CREATE INDEX modules_dist on modules(dist)",
+            "CREATE INDEX modules_lib on modules(in_lib)",
+            "CREATE INDEX modules_basedir on modules(in_basedir)",
+        ],
+    };
 }
+    
 
 1;
 

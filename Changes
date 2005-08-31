@@ -1,8 +1,41 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 138 $
-# $Date: 2005-05-02 12:16:03 +0200 (Mon, 02 May 2005) $ 
+# $Rev: 180 $
+# $Date: 2005-08-26 16:48:08 +0200 (Fri, 26 Aug 2005) $ 
 #-----------------------------------------------------------------
+
+
+2005-08-26
+----------
+d: finished rewrite
+
+
+2005-06-08
+----------
+d: make site
+d: removed hardcoded limit in analyse_dists
+d: removed Bug in FindModules / proper_libs
+
+
+2005-05-20
+----------
+d: Prereq
+d: added Prereq (not working)
+d: resolved Bug in M:C:G:Uses (didn't count used in tests)
+d: added M:C:G:Authors
+
+
+2005-05-19
+----------
+d: re-added Module::CPANTS::Generator::Uses
+d: calc_kwalitee works
+
+
+2005-05-18
+----------
+d: stuff
+d: FindModules
+
 
 2005-05-01
 ----------
