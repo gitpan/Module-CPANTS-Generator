@@ -72,6 +72,7 @@ sub kwalitee_indicators{
         {
             name=>'is_prereq',
             error=>q{This distribution is not required by another distribution by another author.},
+            remedy=>q{Convice / force / bribe another CPAN author to use this distribution.},
             code=>sub {
                 my $dist=shift;
                 my $pauseid=$dist->author->pauseid;

@@ -9,11 +9,8 @@ sub fill_authors {
     my $self=shift;
     my $cpants=shift;
     
-    # check if 01mailrc was changed since the last run
-    return if Module::CPANTS::DB::Author->count_all;
-    
     print "parsing authors info\n";
-    my $p = Parse::CPAN::Authors->new(Module::CPANTS::Config->minicpan_01mailrc);
+    my $p = Parse::CPAN::Authors->new(Module::CPANTS::Generator->minicpan_01mailrc);
     foreach my $auth ($p->authors) {
         my $a=Module::CPANTS::DB::Author->find_or_create({pauseid=>$auth->pauseid});
         print $a->pauseid,"\n" if $cpants->opts->{verbose};
@@ -32,9 +29,9 @@ sub fill_authors {
 sub analyse { 
     my $self=shift;
     my $dist=shift;
-    my $pauseid=$dist->pauseid;
-    my @author=Module::CPANTS::DB::Author->search(pauseid=>$pauseid);
-    $dist->author($author[0]);
+    my $pauseid=$dist->pauseid || 'UNKNOWN';
+    my $author=Module::CPANTS::DB::Author->find_or_create(pauseid=>$pauseid);
+    $dist->author($author);
     return 1;
 }
 
@@ -59,6 +56,7 @@ sub schema {
             'name text',
             'email text',
             'average_kwalitee integer',
+            'prev_av_kw integer',
             'num_dists integer',
             'rank integer',
         ],
@@ -67,6 +65,7 @@ sub schema {
             'create index auth_id on author(id)',
             'create index auth_pauseid on author(pauseid)',
             'create index auth_av on author(average_kwalitee)',
+            'create index auth_pav on author(prev_av_kw)',
             'create index auth_num on author(num_dists)',
             'create index auth_rank on author(rank)',
         ],

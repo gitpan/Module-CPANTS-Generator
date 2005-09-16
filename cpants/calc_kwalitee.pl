@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
- 
+use DBI;
+
 use lib('../lib/','lib/');
 
 use Module::CPANTS::Generator;
@@ -9,61 +10,12 @@ use Module::CPANTS::Generator;
 use Module::CPANTS::DB;
 
 my $cpants=Module::CPANTS::Generator->new;
-
-
 my $dbh=Module::CPANTS::DB->db_Main;
 
 
-# links dists with uses and prereq
-{
-    my %mods;
-    my $sth=$dbh->prepare("select module,dist from modules");
-    $sth->execute;
-    while (my($mod,$dist)=$sth->fetchrow_array) {
-        $mods{$mod}=$dist;
-    }
-
-    while (my($mod,$dist)=each%mods) {
-        $dbh->do("update uses set in_dist=? where module=?",undef,$dist,$mod);
-        $dbh->do("update prereq set in_dist=? where requires=?",undef,$dist,$mod);
-    }
-}
-
+Module::CPANTS::DB->link_dists_modules;
 $cpants->calc_kwalitee;
-
-# recursive prereqs NOT WORKING
-if (1==2){
-    my $sth=$dbh->prepare("select prereq.dist,dist.id,dist.dist_without_version from dist,prereq where dist.id=prereq.in_dist order by prereq.dist");
-    $sth->execute;
-    my $this_dist;
-    my %dists;
-    while (my ($dist,$oid,$oname)=$sth->fetchrow_array) {
-        push(@{$dists{$dist}},[$oid,$oname]);
-    }
-    while (my ($di,$data) = each(%dists)) {
-        my $pre=get_prereq($di,$data);
-        print "$di: $pre\n";
-    }
-
-my %pre;
-sub get_prereq {
-    my $di=shift;
-    my $data=shift;
-    my $pre;
-    foreach (@$data) {
-        next if $_->[0]==$di;
-        next if $di == 135;
-        print $_->[0],"\n";
-        if (!$pre{$_->[0]}) {
-            #my $newpre=get_prereq($_->[0],$dists{$_->[0]});
-            my $newpre=$_->[0].",";
-            $pre{$_->[0]}=$newpre;
-        }
-        $pre.=$pre{$_->[0]};
-    }
-    return $pre; 
-}
-}
+Module::CPANTS::Generator::Authors->fill_authors($cpants);
 
 # AUTHOR: num_dists, average
 {
@@ -97,4 +49,18 @@ foreach my $query ("select average_kwalitee,id from author where num_dists>=5 or
     }
 }
 
+# PREVIOUS KWALITEE
+{
+    my $old=DBI->connect("dbi:SQLite:dbname=".$cpants->prev_db_file);
+    my $sth=$old->prepare("select average_kwalitee,pauseid from author");
+    my $update=$dbh->prepare("update author set prev_av_kw=? where pauseid=?");
+    $sth->execute;
+    while (my @r=$sth->fetchrow_array) {
+        $update->execute(@r);
+    }
+}
+
+
+__END__
+# recursive prereqs NOT WORKING
 

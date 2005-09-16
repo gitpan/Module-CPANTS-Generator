@@ -70,6 +70,7 @@ sub kwalitee_indicators {
         {
             name=>'use_strict',
             error=>q{This distribution does not use 'strict' in all of its modules.},
+            remedy=>q{Add 'use strict' to all modules.},
             code=>sub {
                 my $dist=shift;
                 my $modules=$dist->modules;
@@ -83,6 +84,7 @@ sub kwalitee_indicators {
         {
             name=>'has_test_pod',
             error=>q{Doesn't include a test for pod correctness (Test::Pod)},
+            remedy=>q{Add a test using Test::Pod to check for pod correctness.},
             code=>sub {
                 my $dist=shift;
                 return 1 if Module::CPANTS::DB::Uses->search(dist=>$dist->id,module=>'Test::Pod');
@@ -92,6 +94,7 @@ sub kwalitee_indicators {
         {
             name=>'has_test_pod_coverage',
             error=>q{Doesn't include a test for pod coverage (Test::Pod::Coverage)},
+            remedy=>q{Add a test using Test::Pod::Coverage to check for POD coverage.},
             code=>sub {
                 my $dist=shift;
                 return 1 if Module::CPANTS::DB::Uses->search(dist=>$dist->id,module=>'Test::Pod::Coverage');

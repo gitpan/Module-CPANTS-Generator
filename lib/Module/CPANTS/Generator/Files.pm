@@ -66,6 +66,15 @@ sub analyse {
         $dist->$db_file(((grep {$_ eq "$file"} @files)?1:0));
     }
 
+    # find more complex files
+    my %regexs=(
+        file_changelog=>qr{^chang(es?|log)|history}i,
+    );
+    while (my ($name,$regex)=each %regexs) {
+        #$dist->$name(((grep {$_=~/$regex/} @files)?1:0));
+        $dist->$name(grep {$_=~/$regex/} @files);
+    }
+    
     # find special dirs
     my @special_dirs=(qw(lib t));
     foreach my $dir (@special_dirs){
@@ -97,26 +106,26 @@ sub kwalitee_indicators {
   return [
     {
         name=>'has_readme',
-        type=>'basic',
         error=>q{The file 'README' is missing from this distribution. The README provide some basic information to users prior to downloading and unpacking the distribution.},
+        remedy=>q{Add a README to the distribution. It should contain a quick description of your module and how to install it.},
         code=>sub { shift->file_readme ? 1 : 0 },
     },
     {
         name=>'has_manifest',
-        type=>'basic',
         error=>q{The file 'MANIFEST' is missing from this distribution. The MANIFEST lists all files included in the distribution.},
+        remedy=>q{Add a MANIFEST to the distribution. Your buildtool should be able to autogenerate it (eg 'make manifest' or './Build manifest')},
         code=>sub { shift->file_manifest ? 1 : 0 },
     },
     {
         name=>'has_meta_yml',
-        type=>'basic',
         error=>q{The file 'META.yml' is missing from this distribution. META.yml is needed by people maintaining module collections (like CPAN), for people writing installation tools, or just people who want to know some stuff about a distribution before downloading it.},
+        remedy=>q{Add a META.yml to the distribution. Your buildtool should be able to autogenerate it.},
         code=>sub { shift->file_meta_yml ? 1 : 0 },
     },
     {
         name=>'has_buildtool',
-        type=>'basic',
         error=>q{Makefile.PL and/or Build.PL are missing. This makes installing this distribution hard for humans and impossible for automated tools like CPAN/CPANPLUS},
+        remedy=>q{Use a buildtool like Module::Build (recomended) or ExtUtils::MakeMaker to manage your distribution},
         code=>sub {
             my $dist=shift;
             return 1 if $dist->file_makefile_pl || $dist->file_build_pl;
@@ -124,15 +133,21 @@ sub kwalitee_indicators {
         },
     },
     {
+        name=>'has_changelog',
+        error=>q{The distribution hasn't got a Changelog (named something like m/^chang(es?|log)|history$/i. A Changelog helps people decide if they want to upgrade to a new version.},
+        remedy=>q{Add a Changelog (best named 'Changes') to the distribution. It should list at least major changes implemented in newer versions.},
+        code=>sub { shift->file_changelog ? 1 : 0 },
+    },
+    {
         name=>'no_symlinks',
-        type=>'basic',
         error=>q{This distribution includes symbolic links (symlinks). This is bad, because there are operating systems do not handle symlinks.},
+        remedy=>q{Remove the symlinkes from the distribution.},
         code=>sub {shift->symlinks ? 0 : 1},
         },
     {
         name=>'has_tests',
-        type=>'basic',
         error=>q{This distribution doesn't contain either a file called 'test.pl' or a directory called 't'. This indicates that it doesn't contain even the most basic test-suite. This is really BAD!},
+        remedy=>q{Add tests!},
         code=>sub {
             my $dist=shift;
             return 1 if $dist->file_test_pl || $dist->dir_t;
@@ -175,6 +190,7 @@ sub schema {
             'file_signature integer',
             'file_ninja integer',
             'file_test_pl integer',
+            'file_changelog text',
             'dir_lib integer',
             'dir_t integer',
         ],

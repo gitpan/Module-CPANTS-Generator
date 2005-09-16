@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use DBI;
+use File::Copy;
 
 use lib('../lib/','lib/');
 
@@ -13,11 +14,12 @@ my $schema=$cpants->get_schema;
 my $indices=$schema->{'index'};
 delete $schema->{'index'};
 
-my $db_file=$cpants->config->db_file;
+my $db_file=$cpants->db_file;
 
 if (-e $db_file) {
-    print "\nCPANTS DB file already exists:\n\t$db_file\nIf the DB schema changed, please run the appropriate DB altering scripts.\n\n";
-    exit;
+    move('cpants.db','cpants_previous.db');
+    #print "\nCPANTS DB file already exists:\n\t$db_file\nIf the DB schema changed, please run the appropriate DB altering scripts.\n\n";
+    #exit;
 }
 
 my $DBH=DBI->connect("dbi:SQLite:dbname=$db_file");

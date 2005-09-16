@@ -1,7 +1,7 @@
 #-----------------------------------------------------------------
 # TODO Module-CPANTS-Generator
-# $Rev: 180 $
-# $Date: 2005-08-26 16:48:08 +0200 (Fri, 26 Aug 2005) $ 
+# $Rev: 1225 $
+# $Date: 2005-09-11T20:45:45.827450Z $ 
 #-----------------------------------------------------------------
 
 
@@ -9,17 +9,11 @@
 # BUGS
 #-----------------------------------------------------------------
 
-* release_date is not working
-
 #-----------------------------------------------------------------
 # for 0.40
 #-----------------------------------------------------------------
 
-* move generated_at/with from dist to general table
-
 * generate bzip2 archive and move to the right place
-
-* include previous average kwalitee in authors top40
 
 #-----------------------------------------------------------------
 # The stuff that's bound to stay a while on the TODO-list 
@@ -33,7 +27,12 @@
 #-----------------------------------------------------------------
 
 * lint.pl
+::Lint -> viel gefake, vor allem die diversen add_to_* und search* methoden
+::DB  -> Class::DBI wie gehabt
 
+je nachdem, ob lint oder cpan wird lint oder db geladen und verwenden, 
+d.h. da muss noch div abstraktion dazwischen
+   
 * extracts_nicely: discern between proper dist (Dist-Name-0.10),
    semi-proper dists (some-dir) and really bad dists (spew all in cwd)
 

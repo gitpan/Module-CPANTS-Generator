@@ -1,33 +1,29 @@
-package Module::CPANTS::DB;
+package Module::CPANTS::Lint;
 use strict;
 use warnings;
 use Carp;
 use Cwd;
 
-use base 'Class::DBI::SQLite';
-use Class::DBI::Pager;
+use base 'Class::Accessor';
+use Module::CPANTS::Generator;
 
-__PACKAGE__->set_db('Main',"dbi:SQLite:dbname=".Module::CPANTS::Generator->db_file);
+my $cpants=Module::CPANTS::Generator->new;
+my $schema=$cpants->get_schema;
 
-sub link_dists_modules {
-    my $class=shift;
-    my %mods;
-    my $dbh=$class->db_Main;
-    my $sth=$dbh->prepare("select module,dist from modules");
-    $sth->execute;
-    while (my($mod,$dist)=$sth->fetchrow_array) {
-        $mods{$mod}=$dist;
-    }
+use Data::Dumper;
+#print Dumper $schema;
 
-    my $sth_up_uses=$dbh->prepare_cached("update uses set in_dist=? where module=?");
-    my $sth_up_prereq=$dbh->prepare_cached("update prereq set in_dist=? where requires=?");
-    while (my($mod,$dist)=each%mods) {
-        $sth_up_uses->execute($dist,$mod);
-        $sth_up_prereq->execute($dist,$mod);
+
+while (my ($name,$def)=each %$schema) {
+    foreach my $fld (@$def) {
+        $fld=~s/ .*$//g;
+        next if lc($fld) eq 'create';
+        next if $fld eq 'id';
+        __PACKAGE__->mk_accessor($fld."_".$fld);
     }
 }
 
-
+__END__
 
 package Module::CPANTS::DB::Dist;
 use base 'Module::CPANTS::DB';
@@ -39,26 +35,6 @@ __PACKAGE__->has_many(prereqs=>'Module::CPANTS::DB::Prereq'=>'dist');
 __PACKAGE__->set_up_table('dist');
 __PACKAGE__->has_a(kwalitee=>'Module::CPANTS::DB::Kwalitee');
 __PACKAGE__->has_a(author=>'Module::CPANTS::DB::Author');
-
-__PACKAGE__->add_constructor(retrieve_dist=>'dist_without_version=?');
-
-
-__PACKAGE__->set_sql(required_by_otherauthor=>
-    "SELECT prereq.dist as id FROM prereq,author,dist
-    WHERE dist.author=author.id AND dist.id=prereq.dist
-    AND prereq.in_dist=? AND author.pauseid != ?"
-);
-__PACKAGE__->set_sql(required_by=>
-    "SELECT DISTINCT dist as id FROM prereq
-    WHERE in_dist=?"
-);
-
-__PACKAGE__->set_sql(best_dists=>
-    "SELECT dist.id FROM dist,kwalitee,author where dist.kwalitee=kwalitee.id AND kwalitee.kwalitee=? AND dist.author=author.id order by author.pauseid"
-);
-__PACKAGE__->set_sql(worst_dists=>
-    "SELECT dist.id FROM dist,kwalitee,author where dist.kwalitee=kwalitee.id AND kwalitee.kwalitee<5 AND dist.author=author.id order by kwalitee.kwalitee,author.pauseid"
-);
 
 
 sub uses_in_tests {

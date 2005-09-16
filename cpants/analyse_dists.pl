@@ -12,7 +12,8 @@ GetOptions(\%opts,qw(limit:i force test:s verbose));
 
 my $cpants=Module::CPANTS::Generator->new(\%opts);
 
-Module::CPANTS::Generator::Authors->fill_authors($cpants);
+#Module::CPANTS::Generator::Authors->fill_authors($cpants);
 
 $cpants->analyse_cpan;
+
 

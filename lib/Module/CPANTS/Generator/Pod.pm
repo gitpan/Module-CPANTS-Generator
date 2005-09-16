@@ -45,6 +45,7 @@ sub kwalitee_indicators {
         {
             name=>'no_pod_errors',
             error=>q{The documentation for this distribution contains syntactic errors in its POD.},
+            remedy=>q{Remove the POD errors. You can check for POD errors automatically by including Test::Pod to your test suite.},
             code=>sub { shift->pod_errors ? 0 : 1 },
         },
     ];

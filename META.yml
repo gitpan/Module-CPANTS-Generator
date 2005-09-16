@@ -1,6 +1,6 @@
 ---
 name: Module-CPANTS-Generator
-version: 0.40
+version: 0.41
 author:
   - Thomas Klausner <domm@zsi.at> http://domm.zsi.at
   - |-
@@ -24,25 +24,23 @@ requires:
   Pod::Simple: 3.02
   YAML: 0.36
 provides:
-  Module::CPANTS::Config:
-    file: lib/Module/CPANTS/Config.pm
   Module::CPANTS::DB:
     file: lib/Module/CPANTS/DB.pm
   Module::CPANTS::DB::Author:
-    file: lib/Module/CPANTS/DB.pm
+    file: lib/Module/CPANTS/Lint.pm
   Module::CPANTS::DB::Dist:
-    file: lib/Module/CPANTS/DB.pm
+    file: lib/Module/CPANTS/Lint.pm
   Module::CPANTS::DB::Kwalitee:
-    file: lib/Module/CPANTS/DB.pm
+    file: lib/Module/CPANTS/Lint.pm
   Module::CPANTS::DB::Modules:
-    file: lib/Module/CPANTS/DB.pm
+    file: lib/Module/CPANTS/Lint.pm
   Module::CPANTS::DB::Prereq:
-    file: lib/Module/CPANTS/DB.pm
+    file: lib/Module/CPANTS/Lint.pm
   Module::CPANTS::DB::Uses:
-    file: lib/Module/CPANTS/DB.pm
+    file: lib/Module/CPANTS/Lint.pm
   Module::CPANTS::Generator:
     file: lib/Module/CPANTS/Generator.pm
-    version: 0.40
+    version: 0.41
   Module::CPANTS::Generator::Authors:
     file: lib/Module/CPANTS/Generator/Authors.pm
   Module::CPANTS::Generator::Files:
@@ -57,4 +55,6 @@ provides:
     file: lib/Module/CPANTS/Generator/Unpack.pm
   Module::CPANTS::Generator::Uses:
     file: lib/Module/CPANTS/Generator/Uses.pm
-generated_by: Module::Build version 0.2609
+  Module::CPANTS::Lint:
+    file: lib/Module/CPANTS/Lint.pm
+generated_by: Module::Build version 0.2611

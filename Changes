@@ -1,8 +1,31 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 180 $
-# $Date: 2005-08-26 16:48:08 +0200 (Fri, 26 Aug 2005) $ 
+# $Rev: 1257 $
+# $Date: 2005-09-16T20:03:52.974927Z $ 
 #-----------------------------------------------------------------
+
+
+2005-09-15 (r1255@domm) 
+----------
+* added 'remedy' information to all metrics
+* new metric: has_changelog
+    suggested by Adam Kennedy (Alias)
+    better name suggested by Smylers
+    implemented using a regex provided by H.Merijn Brand (Tux)
+   
+
+2005-09-11
+----------
+d: removed several causes for cpants_errors
+d: release date now works (thanks to Tels for pushing me in the right direction)
+
+
+2005-09-02
+----------
+!!! release Module-CPANTS-Generator-0.40 
+d: removed some bugs
+d: include previous average kwalitee in authors top40
+d: move generated_at/with from dist to general table
 
 
 2005-08-26
