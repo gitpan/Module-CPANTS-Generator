@@ -1,12 +1,25 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 1257 $
-# $Date: 2005-09-16T20:03:52.974927Z $ 
+# $Rev: 1403 $
+# $Date: 2005-09-24T19:16:06.877650Z $ 
 #-----------------------------------------------------------------
 
-
-2005-09-15 (r1255@domm) 
+2005-09-24
 ----------
+!! released as Module-CPANTS-Generator-0.42
+* insert run version and run date works now (removed typo in SQL)
+* removed typos (reported by cog)
+* allow 'v' in has_proper_version (reported by Tony Bowden)
+
+    
+2005-09-19
+----------
+* removed typo (reported by n1vux (use.perl.org))
+
+
+2005-09-15 (r1259@domm) 
+----------
+!! released as Module-CPANTS-Generator-0.41
 * added 'remedy' information to all metrics
 * new metric: has_changelog
     suggested by Adam Kennedy (Alias)

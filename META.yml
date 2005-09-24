@@ -1,6 +1,6 @@
 ---
 name: Module-CPANTS-Generator
-version: 0.41
+version: 0.42
 author:
   - Thomas Klausner <domm@zsi.at> http://domm.zsi.at
   - |-
@@ -40,7 +40,7 @@ provides:
     file: lib/Module/CPANTS/Lint.pm
   Module::CPANTS::Generator:
     file: lib/Module/CPANTS/Generator.pm
-    version: 0.41
+    version: 0.42
   Module::CPANTS::Generator::Authors:
     file: lib/Module/CPANTS/Generator/Authors.pm
   Module::CPANTS::Generator::Files:

@@ -141,11 +141,11 @@ sub kwalitee_indicators {
         },
         {
             name=>'has_proper_version',
-            error=>"The version number isn't a number. It probably contains letter, which it shouldn't",
+            error=>"The version number isn't a number. It probably contains letter besides a leading 'v', which it shouldn't",
             remedy=>q{Remove all letters from the version number. If you want to mark a release as a developer release, use the scheme 'Module-1.00_01'},
             code=>sub { my $v=shift->version;
                  return 0 unless $v;
-                 return 1 if ($v=~/^[\d\.]+$/);
+                 return 1 if ($v=~/^v?[\d\.]+$/i);
                  return 0;
             }
         },

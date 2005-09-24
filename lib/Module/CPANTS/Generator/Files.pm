@@ -140,7 +140,7 @@ sub kwalitee_indicators {
     },
     {
         name=>'no_symlinks',
-        error=>q{This distribution includes symbolic links (symlinks). This is bad, because there are operating systems do not handle symlinks.},
+        error=>q{This distribution includes symbolic links (symlinks). This is bad, because there are operating systems that do not handle symlinks.},
         remedy=>q{Remove the symlinkes from the distribution.},
         code=>sub {shift->symlinks ? 0 : 1},
         },

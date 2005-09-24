@@ -14,7 +14,7 @@ use File::Path;
 use IO::Capture::Stderr;
 
 use vars qw($VERSION);
-$VERSION = "0.41";
+$VERSION = "0.42";
 
 ##################################################################
 # SETUP - on load
@@ -60,6 +60,7 @@ sub analyse_cpan {
         $seen{$d->package}++;
     }
     
+    $self->set_date;
     foreach my $dist (sort {$a->dist cmp $b->dist} $p->latest_distributions) {
         my $package=$dist->distvname;
         
@@ -80,7 +81,6 @@ sub analyse_cpan {
             last if $cnt>$limit;
         }
     }
-    $self->set_date;
 }
     
 sub analyse_dist {
@@ -221,7 +221,7 @@ sub set_date {
     my $version=$VERSION;
     my $now=localtime;
     my $dbh=Module::CPANTS::DB->db_Main;
-    $dbh->do("insert into version (?,?)",undef,$version,$now);
+    $dbh->do("insert into version values (?,?)",undef,$version,$now);
     return;
 }
 
