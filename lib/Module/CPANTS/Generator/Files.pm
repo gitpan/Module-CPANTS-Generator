@@ -56,7 +56,6 @@ sub analyse {
     $dist->symlinks(scalar @symlinks);
     $dist->symlinks_list(join(';',@symlinks));
 
-
     # find special files
     my %reqfiles;
     my @special_files=(qw(Makefile.PL Build.PL README META.yml SIGNATURE MANIFEST NINJA test.pl));
@@ -71,8 +70,7 @@ sub analyse {
         file_changelog=>qr{^chang(es?|log)|history}i,
     );
     while (my ($name,$regex)=each %regexs) {
-        #$dist->$name(((grep {$_=~/$regex/} @files)?1:0));
-        $dist->$name(grep {$_=~/$regex/} @files);
+        $dist->$name(join(',',grep {$_=~/$regex/} @files));
     }
     
     # find special dirs

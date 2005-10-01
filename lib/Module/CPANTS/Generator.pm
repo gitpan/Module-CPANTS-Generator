@@ -14,7 +14,7 @@ use File::Path;
 use IO::Capture::Stderr;
 
 use vars qw($VERSION);
-$VERSION = "0.42";
+$VERSION = "0.43";
 
 ##################################################################
 # SETUP - on load

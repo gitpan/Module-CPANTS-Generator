@@ -152,7 +152,7 @@ sub kwalitee_indicators {
         {
             name=>'no_cpants_errors',
             error=>"There where problems during CPANTS testing. Those problems are either caused by some very strange behaviour of this distribution or a bug in CPANTS.",
-            remedy=>q{Contact me. I'll try to improve CPANTS (unless the problem is caused by some very strange behaviour of the distribution.},
+            remedy=>q{Contact me, as this distribution seems to have triggered a bug in CPANTS. I'll try to improve CPANTS (unless the problem is caused by some very strange behaviour of the distribution.)},
             code=>sub { shift->cpants_errors ? 0 : 1 }
         },
     ];

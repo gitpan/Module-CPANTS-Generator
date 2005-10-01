@@ -1,8 +1,17 @@
 #-----------------------------------------------------------------
 # Changes for Module::CPANTS::Generator
-# $Rev: 1403 $
-# $Date: 2005-09-24T19:16:06.877650Z $ 
+# $Rev: 1744 $
+# $Date: 2005-10-01T19:10:33.895811Z $ 
 #-----------------------------------------------------------------
+
+
+2005-09-27
+----------
+!! released as Module-CPANTS-Generator-0.43
+* clarified no_cpants_errors remedy text
+* removed bug in changelog-detection (spotted by Michael Graham)
+  (also reported by Barbie as RT#14857)
+
 
 2005-09-24
 ----------
